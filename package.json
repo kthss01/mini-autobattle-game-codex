@@ -1,0 +1,14 @@
+{
+  "name": "mini-autobattle-game-codex",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @autobattle/client",
+    "build": "npm run build -w @autobattle/client",
+    "test": "npm run test -w @autobattle/sim",
+    "sim:run": "npm run sim:run -w @autobattle/sim"
+  }
+}
