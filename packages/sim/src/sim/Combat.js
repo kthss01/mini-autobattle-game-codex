@@ -19,17 +19,23 @@ function damageMultiplier(attacker, defender) {
   return mul;
 }
 
+function pushLog(world, event) {
+  world.log.push({ t: world.t, ...event });
+}
+
 function applyDamage(world, source, target, raw) {
   if (!isAlive(target)) return 0;
+  const wasAlive = target.alive;
   const reduced = raw * damageMultiplier(source, target);
   const dmg = Math.max(1, Math.round(reduced * (100 / (100 + target.def))));
   target.hp -= dmg;
   source.stats.damageDone += dmg;
-  if (target.hp <= 0) {
+  if (wasAlive && target.hp <= 0) {
     target.hp = 0;
     target.alive = false;
     source.stats.kills += 1;
     target.stats.deaths += 1;
+    pushLog(world, { type: 'KILL', actorId: source.id, targetId: target.id, value: dmg });
   }
   return dmg;
 }
@@ -47,6 +53,13 @@ function applySkill(world, unit, skillId, intent) {
   const skill = SKILLS_BY_ID[skillId];
   if (!skill || (unit.skillCooldowns[skillId] || 0) > 0) return;
   unit.skillCooldowns[skillId] = skill.cooldown;
+  pushLog(world, {
+    type: 'CAST',
+    actorId: unit.id,
+    targetId: intent.targetId,
+    skillId,
+    value: 0
+  });
 
   const enemies = world.units.filter((u) => isAlive(u) && u.teamId !== unit.teamId);
   const allies = world.units.filter((u) => isAlive(u) && u.teamId === unit.teamId);
@@ -157,7 +170,13 @@ export function stepCombat(world, dt) {
       if (!target || !isAlive(target) || !inRange(unit, target, unit.attackRange)) continue;
       if (unit.attackTimer > 0) continue;
       unit.attackTimer = unit.attackCd;
-      applyDamage(world, unit, target, unit.atk);
+      const damage = applyDamage(world, unit, target, unit.atk);
+      pushLog(world, {
+        type: 'ATTACK',
+        actorId: unit.id,
+        targetId: target.id,
+        value: damage
+      });
     }
   }
 
@@ -166,5 +185,6 @@ export function stepCombat(world, dt) {
   if (!aAlive || !bAlive) {
     world.finished = true;
     world.winner = aAlive && !bAlive ? 'A' : bAlive && !aAlive ? 'B' : 'DRAW';
+    pushLog(world, { type: 'END', actorId: null, targetId: null, value: world.winner });
   }
 }
