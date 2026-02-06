@@ -1,15 +1,143 @@
 /** @type {import('../types.js').SkillDef[]} */
 export const SKILLS = [
-  { id: 'taunt_shout', name: 'Taunt Shout', cooldown: 8, range: 120, castTime: 0, target: 'POINT', shape: { kind: 'CIRCLE', radius: 90 }, effects: [{ kind: 'STUN', duration: 0.6 }], aiHint: { priorityBase: 70, useWhen: 'CLUMP_ENEMIES' } },
-  { id: 'shield_wall', name: 'Shield Wall', cooldown: 10, range: 0, castTime: 0, target: 'SELF', shape: { kind: 'CIRCLE', radius: 1 }, effects: [{ kind: 'SHIELD', value: 220, duration: 3 }], aiHint: { priorityBase: 85, useWhen: 'LOW_HP' } },
-  { id: 'healing_wave', name: 'Healing Wave', cooldown: 7, range: 180, castTime: 0.15, target: 'ALLY', shape: { kind: 'CIRCLE', radius: 80 }, effects: [{ kind: 'HEAL', value: 210 }], aiHint: { priorityBase: 88, useWhen: 'ALLY_LOW_HP' } },
-  { id: 'purify_light', name: 'Purify Light', cooldown: 11, range: 160, castTime: 0.1, target: 'ALLY', shape: { kind: 'CIRCLE', radius: 70 }, effects: [{ kind: 'HEAL', value: 120 }, { kind: 'SHIELD', value: 120, duration: 2 }], aiHint: { priorityBase: 74, useWhen: 'ALLY_FOCUSED' } },
-  { id: 'dash_strike', name: 'Dash Strike', cooldown: 6, range: 220, castTime: 0, target: 'ENEMY', shape: { kind: 'LINE', length: 220, width: 20 }, effects: [{ kind: 'DAMAGE', value: 180 }], aiHint: { priorityBase: 76, useWhen: 'BACKLINE_ACCESS' } },
-  { id: 'rupture_blade', name: 'Rupture Blade', cooldown: 8, range: 80, castTime: 0, target: 'ENEMY', shape: { kind: 'CIRCLE', radius: 50 }, effects: [{ kind: 'DAMAGE', value: 240 }], aiHint: { priorityBase: 79, useWhen: 'FINISH_LOW_HP' } },
-  { id: 'snipe_round', name: 'Snipe Round', cooldown: 5, range: 330, castTime: 0.2, target: 'ENEMY', shape: { kind: 'LINE', length: 330, width: 10 }, effects: [{ kind: 'DAMAGE', value: 210 }], aiHint: { priorityBase: 80, useWhen: 'SAFE_RANGE' } },
-  { id: 'suppress_shot', name: 'Suppress Shot', cooldown: 9, range: 280, castTime: 0.1, target: 'ENEMY', shape: { kind: 'LINE', length: 280, width: 15 }, effects: [{ kind: 'DAMAGE', value: 120 }, { kind: 'SLOW', value: 0.3, duration: 1.2 }], aiHint: { priorityBase: 68, useWhen: 'CHASE_OR_KITE' } },
-  { id: 'flame_burst', name: 'Flame Burst', cooldown: 8, range: 200, castTime: 0.15, target: 'POINT', shape: { kind: 'CIRCLE', radius: 100 }, effects: [{ kind: 'DAMAGE', value: 170 }], aiHint: { priorityBase: 84, useWhen: 'CLUMP_ENEMIES' } },
-  { id: 'arcane_nova', name: 'Arcane Nova', cooldown: 12, range: 140, castTime: 0.25, target: 'POINT', shape: { kind: 'CIRCLE', radius: 120 }, effects: [{ kind: 'DAMAGE', value: 220 }, { kind: 'SLOW', value: 0.25, duration: 1.5 }], aiHint: { priorityBase: 72, useWhen: 'MID_FIGHT_CLUMP' } },
-  { id: 'summon_wisp', name: 'Summon Wisp', cooldown: 14, range: 0, castTime: 0.3, target: 'SELF', shape: { kind: 'CIRCLE', radius: 1 }, effects: [{ kind: 'SHIELD', value: 80, duration: 5 }], aiHint: { priorityBase: 66, useWhen: 'OPENING' } },
-  { id: 'meteor_drop', name: 'Meteor Drop', cooldown: 15, range: 260, castTime: 0.35, target: 'POINT', shape: { kind: 'CIRCLE', radius: 110 }, effects: [{ kind: 'DAMAGE', value: 260 }, { kind: 'STUN', duration: 0.4 }], aiHint: { priorityBase: 90, useWhen: 'BIG_CLUMP' } }
+  {
+    id: 'taunt_shout',
+    name: 'Taunt Shout',
+    cooldown: 8,
+    range: 140,
+    castTime: 0,
+    target: 'POINT',
+    shape: { kind: 'CIRCLE', radius: 90 },
+    effects: [{ kind: 'STUN', duration: 0.55 }],
+    aiHint: { priorityBase: 70, useWhen: 'CLUMP_ENEMIES' }
+  },
+  {
+    id: 'shield_wall',
+    name: 'Shield Wall',
+    cooldown: 10,
+    range: 0,
+    castTime: 0,
+    target: 'SELF',
+    shape: { kind: 'SINGLE' },
+    effects: [{ kind: 'SHIELD', amount: 220, duration: 3 }],
+    aiHint: { priorityBase: 85, useWhen: 'LOW_HP_SELF' }
+  },
+  {
+    id: 'quick_heal',
+    name: 'Quick Heal',
+    cooldown: 4.5,
+    range: 220,
+    castTime: 0,
+    target: 'ALLY',
+    shape: { kind: 'SINGLE' },
+    effects: [{ kind: 'HEAL', amount: 140 }],
+    aiHint: { priorityBase: 90, useWhen: 'LOW_HP_ALLY' }
+  },
+  {
+    id: 'healing_wave',
+    name: 'Healing Wave',
+    cooldown: 9,
+    range: 260,
+    castTime: 0.2,
+    target: 'POINT',
+    shape: { kind: 'CIRCLE', radius: 110 },
+    effects: [{ kind: 'HEAL', amount: 95 }],
+    aiHint: { priorityBase: 78, useWhen: 'CLUMP_ENEMIES' }
+  },
+  {
+    id: 'power_shot',
+    name: 'Power Shot',
+    cooldown: 7,
+    range: 420,
+    castTime: 0.15,
+    target: 'ENEMY',
+    shape: { kind: 'SINGLE' },
+    effects: [{ kind: 'DAMAGE', amount: 170 }],
+    aiHint: { priorityBase: 72, useWhen: 'ON_COOLDOWN' }
+  },
+  {
+    id: 'rapid_fire',
+    name: 'Rapid Fire',
+    cooldown: 10,
+    range: 0,
+    castTime: 0,
+    target: 'SELF',
+    shape: { kind: 'SINGLE' },
+    effects: [{ kind: 'SLOW', ratio: -0.2, duration: 3 }],
+    aiHint: { priorityBase: 55, useWhen: 'ON_COOLDOWN' }
+  },
+  {
+    id: 'dash_strike',
+    name: 'Dash Strike',
+    cooldown: 8.5,
+    range: 260,
+    castTime: 0,
+    target: 'ENEMY',
+    shape: { kind: 'SINGLE' },
+    effects: [
+      { kind: 'DAMAGE', amount: 120 },
+      { kind: 'STUN', duration: 0.35 }
+    ],
+    aiHint: { priorityBase: 80, useWhen: 'ON_COOLDOWN' }
+  },
+  {
+    id: 'smoke_screen',
+    name: 'Smoke Screen',
+    cooldown: 12,
+    range: 0,
+    castTime: 0,
+    target: 'SELF',
+    shape: { kind: 'CIRCLE', radius: 90 },
+    effects: [{ kind: 'SHIELD', amount: 160, duration: 2.5 }],
+    aiHint: { priorityBase: 75, useWhen: 'LOW_HP_SELF' }
+  },
+  {
+    id: 'fire_orb',
+    name: 'Fire Orb',
+    cooldown: 7.5,
+    range: 300,
+    castTime: 0.2,
+    target: 'POINT',
+    shape: { kind: 'CIRCLE', radius: 105 },
+    effects: [{ kind: 'DAMAGE', amount: 110 }],
+    aiHint: { priorityBase: 76, useWhen: 'CLUMP_ENEMIES' }
+  },
+  {
+    id: 'ice_nova',
+    name: 'Ice Nova',
+    cooldown: 9.5,
+    range: 260,
+    castTime: 0.15,
+    target: 'POINT',
+    shape: { kind: 'CIRCLE', radius: 120 },
+    effects: [{ kind: 'SLOW', ratio: 0.35, duration: 2.2 }],
+    aiHint: { priorityBase: 70, useWhen: 'CLUMP_ENEMIES' }
+  },
+  {
+    id: 'summon_imps',
+    name: 'Summon Imps',
+    cooldown: 11,
+    range: 200,
+    castTime: 0.2,
+    target: 'POINT',
+    shape: { kind: 'CIRCLE', radius: 80 },
+    effects: [{ kind: 'SUMMON', count: 2, unitId: 'imp_minion', duration: 12 }],
+    aiHint: { priorityBase: 68, useWhen: 'ON_COOLDOWN' }
+  },
+  {
+    id: 'drain_slash',
+    name: 'Drain Slash',
+    cooldown: 6.5,
+    range: 80,
+    castTime: 0,
+    target: 'ENEMY',
+    shape: { kind: 'SINGLE' },
+    effects: [
+      { kind: 'DAMAGE', amount: 120 },
+      { kind: 'LIFESTEAL', ratio: 0.45 }
+    ],
+    aiHint: { priorityBase: 73, useWhen: 'ON_COOLDOWN' }
+  }
 ];
+
+export const SKILLS_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s]));

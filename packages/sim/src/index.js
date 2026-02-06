@@ -1,7 +1,7 @@
 import { CHAMPIONS } from './data/champions.js';
 import { SKILLS } from './data/skills.js';
-import { TAGS } from './data/tags.js';
-import { TAG_MODIFIERS, TEAM_SYNERGIES } from './data/synergies.js';
+import { TAGS, TAG_MODIFIERS } from './data/tags.js';
+import { TEAM_SYNERGIES } from './data/synergies.js';
 
 export { CHAMPIONS, SKILLS, TAGS, TAG_MODIFIERS, TEAM_SYNERGIES };
 

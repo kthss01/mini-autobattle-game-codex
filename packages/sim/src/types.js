@@ -1,6 +1,4 @@
-/**
- * @typedef {('TANK'|'HEALER'|'DIVER'|'SNIPER'|'AOE'|'BURST'|'CC'|'SUMMON')} Tag
- */
+/** @typedef {('TANK'|'HEALER'|'DIVER'|'SNIPER'|'AOE'|'BURST'|'CC'|'SUMMON')} Tag */
 
 /**
  * @typedef {Object} BaseStats
@@ -20,25 +18,29 @@
  * @property {Tag[]} tags
  * @property {BaseStats} base
  * @property {string[]} skills
+ * @property {boolean} [isMinion]
  */
 
+/** @typedef {('DAMAGE'|'HEAL'|'SHIELD'|'STUN'|'SLOW'|'SUMMON'|'LIFESTEAL')} EffectKind */
+/** @typedef {('SINGLE'|'CIRCLE'|'LINE'|'CONE')} SkillShapeKind */
+/** @typedef {('SELF'|'ALLY'|'ENEMY'|'POINT')} SkillTarget */
+
 /**
- * @typedef {('DAMAGE'|'HEAL'|'SHIELD'|'STUN'|'SLOW')} EffectKind
+ * @typedef {Object} SkillShape
+ * @property {SkillShapeKind} kind
+ * @property {number} [radius]
+ * @property {number} [width]
+ * @property {number} [length]
  */
 
 /**
  * @typedef {Object} SkillEffect
  * @property {EffectKind} kind
- * @property {number} [value]
+ * @property {number} [amount]
+ * @property {number} [ratio]
  * @property {number} [duration]
- */
-
-/**
- * @typedef {Object} SkillShape
- * @property {'CIRCLE'|'LINE'|'CONE'} kind
- * @property {number} [radius]
- * @property {number} [width]
- * @property {number} [length]
+ * @property {number} [count]
+ * @property {string} [unitId]
  */
 
 /**
@@ -48,10 +50,34 @@
  * @property {number} cooldown
  * @property {number} range
  * @property {number} castTime
- * @property {'SELF'|'ALLY'|'ENEMY'|'POINT'} target
+ * @property {SkillTarget} target
  * @property {SkillShape} shape
  * @property {SkillEffect[]} effects
  * @property {{priorityBase:number, useWhen:string}} aiHint
+ */
+
+/**
+ * @typedef {Object} TagModifier
+ * @property {Tag} fromTag
+ * @property {Tag} toTag
+ * @property {number} [damageMul]
+ * @property {number} [healMul]
+ */
+
+/** @typedef {('MAX_HP_MUL'|'DAMAGE_MUL')} TeamSynergyBonusKind */
+
+/**
+ * @typedef {Object} TeamSynergyRequirement
+ * @property {Tag} tag
+ * @property {number} count
+ */
+
+/**
+ * @typedef {Object} TeamSynergyDef
+ * @property {string} id
+ * @property {string} name
+ * @property {TeamSynergyRequirement[]} requires
+ * @property {{kind: TeamSynergyBonusKind, value: number}} bonus
  */
 
 /**
