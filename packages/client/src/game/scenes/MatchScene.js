@@ -21,6 +21,7 @@ export class MatchScene extends Phaser.Scene {
     super('MatchScene');
     this.acc = 0;
     this.fixedDtMs = 1000 / 30;
+    this.isPaused = false;
     this.logPage = 0;
     this.logVisible = false;
     this.lastRenderedLogLength = -1;
@@ -38,6 +39,10 @@ export class MatchScene extends Phaser.Scene {
 
     this.add.text(16, 14, `Mini Autobattle seed=${this.seed}`, { color: '#ffffff' });
     this.liveCountText = this.add.text(16, 40, '', { color: '#ffffff' });
+    this.pauseStatusText = this.add.text(16, 98, '', {
+      color: '#fbbf24',
+      fontStyle: 'bold'
+    });
 
     this.unitViews = new Map();
     this.fxView = new FxView(this);
@@ -49,11 +54,23 @@ export class MatchScene extends Phaser.Scene {
   }
 
   createLogOverlay() {
+    this.pauseToggleButton = this.add.text(16, 70, 'Pause', {
+      backgroundColor: '#1f2937',
+      color: '#fff',
+      padding: { x: 8, y: 4 }
+    });
+    this.pauseToggleButton.setInteractive({ useHandCursor: true });
+    this.pauseToggleButton.on('pointerdown', () => {
+      this.isPaused = !this.isPaused;
+      this.refreshPauseUI();
+    });
+
     this.logToggleButton = this.add.text(16, 70, '로그', {
       backgroundColor: '#1f2937',
       color: '#fff',
       padding: { x: 8, y: 4 }
     });
+    this.logToggleButton.setX(this.pauseToggleButton.x + this.pauseToggleButton.width + 10);
     this.logToggleButton.setInteractive({ useHandCursor: true });
     this.logToggleButton.on('pointerdown', () => {
       this.logVisible = !this.logVisible;
@@ -104,6 +121,13 @@ export class MatchScene extends Phaser.Scene {
     this.logText.setVisible(false);
     this.logPrevButton.setVisible(false);
     this.logNextButton.setVisible(false);
+
+    this.refreshPauseUI();
+  }
+
+  refreshPauseUI() {
+    this.pauseToggleButton.setText(this.isPaused ? 'Resume' : 'Pause');
+    this.pauseStatusText.setText(this.isPaused ? 'PAUSED' : '');
   }
 
   refreshLogText(force = false) {
@@ -128,39 +152,41 @@ export class MatchScene extends Phaser.Scene {
   }
 
   update(_, delta) {
-    this.acc += delta;
-    while (this.acc >= this.fixedDtMs && !this.match.world.finished) {
-      const fxStart = this.match.world.fx.length;
-      const projectileStart = this.match.world.projectiles.length;
-      const result = this.match.step(1 / 30);
-      this.acc -= this.fixedDtMs;
+    if (!this.isPaused) {
+      this.acc += delta;
+      while (this.acc >= this.fixedDtMs && !this.match.world.finished) {
+        const fxStart = this.match.world.fx.length;
+        const projectileStart = this.match.world.projectiles.length;
+        const result = this.match.step(1 / 30);
+        this.acc -= this.fixedDtMs;
 
-      for (let i = fxStart; i < this.match.world.fx.length; i += 1) this.fxView.addAOE(this.match.world.fx[i]);
-      for (let i = projectileStart; i < this.match.world.projectiles.length; i += 1) this.projectileView.spawn(this.match.world.projectiles[i]);
-      this.refreshLiveCountText();
-      if (this.logVisible) this.refreshLogText();
-
-      if (result.done) {
+        for (let i = fxStart; i < this.match.world.fx.length; i += 1) this.fxView.addAOE(this.match.world.fx[i]);
+        for (let i = projectileStart; i < this.match.world.projectiles.length; i += 1) this.projectileView.spawn(this.match.world.projectiles[i]);
         this.refreshLiveCountText();
-        const stats = {
-          units: this.match.world.units,
-          scoreA: this.match.world.units
-            .filter((u) => u.teamId === 'A')
-            .reduce((sum, u) => sum + u.stats.kills * 3 + Math.round(u.hp / 100), 0),
-          scoreB: this.match.world.units
-            .filter((u) => u.teamId === 'B')
-            .reduce((sum, u) => sum + u.stats.kills * 3 + Math.round(u.hp / 100), 0)
-        };
+        if (this.logVisible) this.refreshLogText();
 
-        const endPayload = {
-          winner: this.match.world.winner,
-          seed: this.match.options.seed,
-          stats,
-          logPolicy: LOG_POLICY,
-          combatLog: [...this.match.world.log]
-        };
+        if (result.done) {
+          this.refreshLiveCountText();
+          const stats = {
+            units: this.match.world.units,
+            scoreA: this.match.world.units
+              .filter((u) => u.teamId === 'A')
+              .reduce((sum, u) => sum + u.stats.kills * 3 + Math.round(u.hp / 100), 0),
+            scoreB: this.match.world.units
+              .filter((u) => u.teamId === 'B')
+              .reduce((sum, u) => sum + u.stats.kills * 3 + Math.round(u.hp / 100), 0)
+          };
 
-        this.scene.start('EndScene', endPayload);
+          const endPayload = {
+            winner: this.match.world.winner,
+            seed: this.match.options.seed,
+            stats,
+            logPolicy: LOG_POLICY,
+            combatLog: [...this.match.world.log]
+          };
+
+          this.scene.start('EndScene', endPayload);
+        }
       }
     }
 
