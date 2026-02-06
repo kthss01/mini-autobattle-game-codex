@@ -1,22 +1,47 @@
+import { UNIT_ROLES } from '@autobattle/sim';
+
 const ROLE_STYLE_MAP = {
-  TANK: {
+  [UNIT_ROLES.TANK]: {
     shape: 'rectangle',
     label: 'Tank',
   },
-  FIGHTER: {
-    shape: 'circle',
-    label: 'Fighter',
+  [UNIT_ROLES.HEALER]: {
+    shape: 'triangle',
+    label: 'Healer',
   },
-  ASSASSIN: {
+  [UNIT_ROLES.DPS]: {
     shape: 'diamond',
-    label: 'Assassin',
+    label: 'DPS',
   },
-  SUPPORT: {
+  [UNIT_ROLES.SUPPORT]: {
     shape: 'circle',
     label: 'Support',
     hasOutline: true,
   },
 };
+
+const UNKNOWN_ROLE_STYLE = {
+  shape: 'circle',
+  label: 'Unknown',
+};
+
+
+const missingRoleStyles = Object.values(UNIT_ROLES).filter((role) => !ROLE_STYLE_MAP[role]);
+if (missingRoleStyles.length > 0) {
+  console.warn(`[UnitView] Missing role styles for: ${missingRoleStyles.join(', ')}`);
+}
+
+function resolveRoleStyle(role) {
+  const normalizedRole = typeof role === 'string' ? role.toLowerCase() : '';
+  const roleStyle = ROLE_STYLE_MAP[normalizedRole];
+
+  if (!roleStyle) {
+    console.warn(`[UnitView] Unknown unit role "${String(role)}". Falling back to Unknown style.`);
+    return UNKNOWN_ROLE_STYLE;
+  }
+
+  return roleStyle;
+}
 
 function createBodyForRole(scene, unit, color, roleStyle) {
   const { x, y } = unit;
@@ -29,6 +54,9 @@ function createBodyForRole(scene, unit, color, roleStyle) {
       break;
     case 'diamond':
       body = scene.add.polygon(x, y, [0, -18, 18, 0, 0, 18, -18, 0], color).setOrigin(0.5);
+      break;
+    case 'triangle':
+      body = scene.add.polygon(x, y, [0, -18, 18, 14, -18, 14], color).setOrigin(0.5);
       break;
     case 'circle':
     default:
@@ -49,7 +77,7 @@ export class UnitView {
     this.scene = scene;
     this.unitId = unit.id;
     const color = unit.teamId === 'A' ? 0x38bdf8 : 0xf87171;
-    this.roleStyle = ROLE_STYLE_MAP[unit.role] || ROLE_STYLE_MAP.FIGHTER;
+    this.roleStyle = resolveRoleStyle(unit.role);
 
     const { body, extraGraphics } = createBodyForRole(scene, unit, color, this.roleStyle);
     this.body = body;
