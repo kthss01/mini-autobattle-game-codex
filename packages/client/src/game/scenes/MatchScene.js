@@ -21,6 +21,7 @@ export class MatchScene extends Phaser.Scene {
     super('MatchScene');
     this.acc = 0;
     this.fixedDtMs = 1000 / 30;
+    this.speedMultiplier = 1;
     this.isPaused = false;
     this.logPage = 0;
     this.logVisible = false;
@@ -29,6 +30,8 @@ export class MatchScene extends Phaser.Scene {
 
   init(data) {
     this.seed = Number(data?.seed ?? 123);
+    this.acc = 0;
+    this.speedMultiplier = 1;
   }
 
   create() {
@@ -81,6 +84,20 @@ export class MatchScene extends Phaser.Scene {
       if (this.logVisible) this.refreshLogText(true);
     });
 
+    this.speedButtons = [1, 2, 4].map((multiplier, index) => {
+      const button = this.add.text(16 + index * 48, 126, `${multiplier}x`, {
+        backgroundColor: '#1f2937',
+        color: '#fff',
+        padding: { x: 8, y: 4 }
+      });
+      button.setInteractive({ useHandCursor: true });
+      button.on('pointerdown', () => {
+        this.speedMultiplier = multiplier;
+        this.refreshSpeedUI();
+      });
+      return button;
+    });
+
     this.logPanel = this.add.graphics();
     this.logPanel.fillStyle(0x111827, 0.9);
     this.logPanel.fillRoundedRect(440, 12, 350, 300, 8);
@@ -123,11 +140,20 @@ export class MatchScene extends Phaser.Scene {
     this.logNextButton.setVisible(false);
 
     this.refreshPauseUI();
+    this.refreshSpeedUI();
   }
 
   refreshPauseUI() {
     this.pauseToggleButton.setText(this.isPaused ? 'Resume' : 'Pause');
     this.pauseStatusText.setText(this.isPaused ? 'PAUSED' : '');
+  }
+
+  refreshSpeedUI() {
+    for (const button of this.speedButtons) {
+      const isActive = button.text === `${this.speedMultiplier}x`;
+      button.setBackgroundColor(isActive ? '#2563eb' : '#1f2937');
+      button.setColor(isActive ? '#ffffff' : '#d1d5db');
+    }
   }
 
   refreshLogText(force = false) {
@@ -153,7 +179,7 @@ export class MatchScene extends Phaser.Scene {
 
   update(_, delta) {
     if (!this.isPaused) {
-      this.acc += delta;
+      this.acc += delta * this.speedMultiplier;
       while (this.acc >= this.fixedDtMs && !this.match.world.finished) {
         const fxStart = this.match.world.fx.length;
         const projectileStart = this.match.world.projectiles.length;
@@ -166,6 +192,8 @@ export class MatchScene extends Phaser.Scene {
         if (this.logVisible) this.refreshLogText();
 
         if (result.done) {
+          this.speedMultiplier = 1;
+          this.refreshSpeedUI();
           this.refreshLiveCountText();
           const stats = {
             units: this.match.world.units,
