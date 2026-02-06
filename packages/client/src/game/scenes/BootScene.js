@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import { CHAMPIONS } from '@autobattle/sim';
 import { createRandomSeed, parseSeedInput } from '../utils/seed';
+import { createDefaultMatchSetup } from '../types/MatchSetup';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -70,7 +72,11 @@ export class BootScene extends Phaser.Scene {
       }
 
       message.textContent = '';
-      this.scene.start('MatchScene', { seed: parsed.seed });
+      const payload = createDefaultMatchSetup(
+        parsed.seed,
+        CHAMPIONS.map((champion) => champion.id)
+      );
+      this.scene.start('MatchScene', payload);
     };
 
     randomButton.addEventListener('click', () => {

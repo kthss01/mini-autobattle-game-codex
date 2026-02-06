@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
-import { CHAMPIONS, createMatch, createTeamFromChampionIds } from '@autobattle/sim';
+import { createMatch } from '@autobattle/sim';
 import { FxView } from '../render/FxView.js';
 import { ProjectileView } from '../render/ProjectileView.js';
 import { UnitView } from '../render/UnitView.js';
+import { DEFAULT_MATCH_DURATION_SEC } from '../types/MatchSetup';
 
 const LOG_PAGE_SIZE = 12;
 const LOG_POLICY = 'END_SCENE';
@@ -14,6 +15,13 @@ function formatLogEntry(entry) {
   const skill = entry.skillId ?? '-';
   const value = entry.value ?? '-';
   return `[${t}] ${entry.type} a=${actor} t=${target} s=${skill} v=${value}`;
+}
+
+function toMatchTeam(teamSetup) {
+  const units = [...(teamSetup?.slots || [])]
+    .sort((a, b) => a.slotIndex - b.slotIndex)
+    .map((slot) => ({ championId: slot.championId }));
+  return { name: teamSetup?.id, units };
 }
 
 export class MatchScene extends Phaser.Scene {
@@ -30,15 +38,19 @@ export class MatchScene extends Phaser.Scene {
 
   init(data) {
     this.seed = Number(data?.seed ?? 123);
+    this.matchOptions = {
+      durationSec: Number(data?.options?.durationSec ?? DEFAULT_MATCH_DURATION_SEC)
+    };
+    this.teamSetup = data?.teams || null;
     this.acc = 0;
     this.speedMultiplier = 1;
   }
 
   create() {
-    const teamA = createTeamFromChampionIds('A', CHAMPIONS.slice(0, 4).map((c) => c.id));
-    const teamB = createTeamFromChampionIds('B', CHAMPIONS.slice(4, 8).map((c) => c.id));
+    const teamA = toMatchTeam(this.teamSetup?.A);
+    const teamB = toMatchTeam(this.teamSetup?.B);
 
-    this.match = createMatch(teamA, teamB, { seed: this.seed, durationSec: 45 });
+    this.match = createMatch(teamA, teamB, { seed: this.seed, ...this.matchOptions });
 
     this.add.text(16, 14, `Mini Autobattle seed=${this.seed}`, { color: '#ffffff' });
     this.liveCountText = this.add.text(16, 40, '', { color: '#ffffff' });
