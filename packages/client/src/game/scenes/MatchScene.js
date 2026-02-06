@@ -22,11 +22,19 @@ export class MatchScene extends Phaser.Scene {
     this.match = createMatch(teamA, teamB, { seed: this.seed, durationSec: 45 });
 
     this.add.text(16, 14, `Mini Autobattle seed=${this.seed}`, { color: '#ffffff' });
+    this.liveCountText = this.add.text(16, 40, '', { color: '#ffffff' });
 
     this.unitViews = new Map();
     this.fxView = new FxView(this);
     this.projectileView = new ProjectileView(this);
     for (const u of this.match.world.units) this.unitViews.set(u.id, new UnitView(this, u));
+    this.refreshLiveCountText();
+  }
+
+  refreshLiveCountText() {
+    const aliveA = this.match.world.units.filter((u) => u.teamId === 'A' && u.alive).length;
+    const aliveB = this.match.world.units.filter((u) => u.teamId === 'B' && u.alive).length;
+    this.liveCountText.setText(`A ${aliveA} vs ${aliveB} B`);
   }
 
   update(_, delta) {
@@ -39,8 +47,10 @@ export class MatchScene extends Phaser.Scene {
 
       for (let i = fxStart; i < this.match.world.fx.length; i += 1) this.fxView.addAOE(this.match.world.fx[i]);
       for (let i = projectileStart; i < this.match.world.projectiles.length; i += 1) this.projectileView.spawn(this.match.world.projectiles[i]);
+      this.refreshLiveCountText();
 
       if (result.done) {
+        this.refreshLiveCountText();
         this.scene.start('ResultScene', { result: this.match.world, seed: this.match.options.seed });
       }
     }

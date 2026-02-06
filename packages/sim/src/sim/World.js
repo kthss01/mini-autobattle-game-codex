@@ -26,9 +26,12 @@ function resolveTeamBuff(champions) {
 
 export function createWorld(teamA, teamB, rng, opt = {}) {
   resetUnitIdCounter();
-  const width = 960;
-  const height = 540;
+  const width = 800;
+  const height = 450;
   const dt = 1 / 30;
+  const xInset = Math.round((160 / 960) * width);
+  const yStart = Math.round((160 / 540) * height);
+  const ySpacing = Math.round((100 / 540) * height);
 
   const aChampions = teamA.units.map((u) => CHAMPIONS_BY_ID[u.championId]);
   const bChampions = teamB.units.map((u) => CHAMPIONS_BY_ID[u.championId]);
@@ -37,8 +40,8 @@ export function createWorld(teamA, teamB, rng, opt = {}) {
   const bBuff = resolveTeamBuff(bChampions);
 
   const units = [];
-  teamA.units.forEach((u, i) => units.push(createUnit('A', u.championId, 160, 160 + i * 100, aBuff.buff)));
-  teamB.units.forEach((u, i) => units.push(createUnit('B', u.championId, width - 160, 160 + i * 100, bBuff.buff)));
+  teamA.units.forEach((u, i) => units.push(createUnit('A', u.championId, xInset, yStart + i * ySpacing, aBuff.buff)));
+  teamB.units.forEach((u, i) => units.push(createUnit('B', u.championId, width - xInset, yStart + i * ySpacing, bBuff.buff)));
 
   return {
     width,
