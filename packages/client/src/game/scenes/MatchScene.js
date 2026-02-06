@@ -5,7 +5,7 @@ import { ProjectileView } from '../render/ProjectileView.js';
 import { UnitView } from '../render/UnitView.js';
 
 const LOG_PAGE_SIZE = 12;
-const LOG_POLICY = 'RESULT_SCENE';
+const LOG_POLICY = 'END_SCENE';
 
 function formatLogEntry(entry) {
   const t = Number(entry.t || 0).toFixed(2);
@@ -142,13 +142,25 @@ export class MatchScene extends Phaser.Scene {
 
       if (result.done) {
         this.refreshLiveCountText();
-        const resultPayload = {
-          result: this.match.world,
-          seed: this.match.options.seed,
-          logPolicy: LOG_POLICY
+        const stats = {
+          units: this.match.world.units,
+          scoreA: this.match.world.units
+            .filter((u) => u.teamId === 'A')
+            .reduce((sum, u) => sum + u.stats.kills * 3 + Math.round(u.hp / 100), 0),
+          scoreB: this.match.world.units
+            .filter((u) => u.teamId === 'B')
+            .reduce((sum, u) => sum + u.stats.kills * 3 + Math.round(u.hp / 100), 0)
         };
-        if (LOG_POLICY === 'RESULT_SCENE') resultPayload.combatLog = [...this.match.world.log];
-        this.scene.start('ResultScene', resultPayload);
+
+        const endPayload = {
+          winner: this.match.world.winner,
+          seed: this.match.options.seed,
+          stats,
+          logPolicy: LOG_POLICY,
+          combatLog: [...this.match.world.log]
+        };
+
+        this.scene.start('EndScene', endPayload);
       }
     }
 
