@@ -29,6 +29,39 @@ function shouldKeepBackline(unit) {
   return ['HEALER', 'SNIPER', 'SUMMON'].some((t) => unit.tags.includes(t));
 }
 
+function isProtectedBacklineUnit(unit) {
+  return ['HEALER', 'SNIPER', 'SUMMON'].some((t) => unit.tags.includes(t));
+}
+
+function findNearestTankToUnit(world, allyUnit) {
+  const allies = getAllies(world, allyUnit).filter((a) => a.id !== allyUnit.id && a.tags.includes('TANK'));
+  if (!allies.length) return null;
+  allies.sort((a, b) => distance2(a, allyUnit) - distance2(b, allyUnit));
+  return allies[0] || null;
+}
+
+function findMostThreatenedProtectedAlly(world, tank) {
+  const protectedAllies = getAllies(world, tank).filter((ally) => ally.id !== tank.id && isProtectedBacklineUnit(ally));
+  let best = null;
+  let bestThreatScore = 0;
+
+  for (const ally of protectedAllies) {
+    let nearbyThreats = 0;
+    for (const enemy of getEnemies(world, ally)) {
+      const d = distance(ally, enemy);
+      if (d <= 220) nearbyThreats += 1;
+      if (enemy.tags.includes('DIVER') && d <= 280) nearbyThreats += 1;
+    }
+
+    if (nearbyThreats > bestThreatScore) {
+      bestThreatScore = nearbyThreats;
+      best = ally;
+    }
+  }
+
+  return bestThreatScore > 0 ? best : null;
+}
+
 function findLowestHpAllyInRange(world, unit, range) {
   const allies = getAllies(world, unit).filter((a) => inRange(unit, a, range));
   allies.sort((a, b) => hpRate(a) - hpRate(b));
@@ -82,6 +115,11 @@ function findBestEnemyTarget(world, unit) {
     if (enemy.tags.includes('SNIPER')) score += 0.18;
     if (enemy.tags.includes('SUMMON')) score += 0.1;
     if (enemy.tags.includes('TANK')) score -= 0.08;
+
+    if (!unit.tags.includes('DIVER') && isProtectedBacklineUnit(enemy)) {
+      const nearbyTank = findNearestTankToUnit(world, enemy);
+      if (nearbyTank && distance(enemy, nearbyTank) <= 170) score -= 0.45;
+    }
 
     if (unit.tags.includes('DIVER') && (enemy.tags.includes('HEALER') || enemy.tags.includes('SNIPER'))) score += 0.25;
     if (unit.tags.includes('BURST') && hpRate(enemy) <= 0.5) score += 0.18;
@@ -198,6 +236,19 @@ export function aiTick(world, dt = AI_TICK_SEC) {
     }
 
     if (unit.tags.includes('TANK')) {
+      const threatenedAlly = findMostThreatenedProtectedAlly(world, unit);
+      if (threatenedAlly) {
+        const dx = threatenedAlly.x - unit.x;
+        const dy = threatenedAlly.y - unit.y;
+        const len = Math.hypot(dx, dy) || 1;
+        unit.intent = {
+          type: 'MOVE',
+          x: threatenedAlly.x - (dx / len) * 55,
+          y: threatenedAlly.y - (dy / len) * 55
+        };
+        continue;
+      }
+
       const allyHealer = getAllies(world, unit).find((a) => a.tags.includes('HEALER'));
       if (allyHealer && distance(unit, allyHealer) > 220) {
         unit.intent = { type: 'MOVE', x: allyHealer.x, y: allyHealer.y };
