@@ -197,14 +197,6 @@ export function aiTick(world, dt = AI_TICK_SEC) {
       }
     }
 
-    if (unit.tags.includes('TANK')) {
-      const allyHealer = getAllies(world, unit).find((a) => a.tags.includes('HEALER'));
-      if (allyHealer && distance(unit, allyHealer) > 220) {
-        unit.intent = { type: 'MOVE', x: allyHealer.x, y: allyHealer.y };
-        continue;
-      }
-    }
-
     if (!inRange(unit, target, unit.attackRange)) {
       unit.intent = { type: 'MOVE', x: target.x, y: target.y };
       continue;
