@@ -9,6 +9,19 @@ export class BootScene extends Phaser.Scene {
     super('BootScene');
   }
 
+  preload() {
+    const FRAME_WIDTH = 128;
+    const FRAME_HEIGHT = 128;
+
+    CHAMPIONS.forEach((champion) => {
+      this.load.spritesheet(
+        `champion-${champion.id}`,
+        `/assets/sprites/${champion.name}.png`,
+        { frameWidth: FRAME_WIDTH, frameHeight: FRAME_HEIGHT }
+      );
+    });
+  }
+
   create() {
     this.slotAssignments = CHAMPIONS.slice(0, TEAM_SIZE).map((champion, slotIndex) => ({
       slotIndex,
