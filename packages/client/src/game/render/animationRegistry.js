@@ -1,7 +1,7 @@
 import { CHAMPIONS } from '@autobattle/sim';
 
 const ACTIONS = ['idle', 'move', 'attack', 'cast', 'death'];
-const FRAMES_PER_ROW = 8;
+const FRAMES_PER_ROW = 4;
 
 const ACTION_LAYOUT = {
   idle: { row: 0, frameRate: 8, repeat: -1 },
