@@ -4,21 +4,46 @@ import { createRandomSeed, parseSeedInput } from '../utils/seed';
 import { createDefaultMatchSetup, TEAM_SIZE } from '../types/MatchSetup';
 import { selectPositionInfo } from '../selectors/positionInfo';
 
+const SPRITE_SHEET_FRAME_WIDTH = 128;
+const SPRITE_SHEET_FRAME_HEIGHT = 128;
+const SPRITE_SHEET_CONFIG = {
+  frameWidth: SPRITE_SHEET_FRAME_WIDTH,
+  frameHeight: SPRITE_SHEET_FRAME_HEIGHT
+};
+
+// Current champion sheets are 1024x1536, which maps to 8x12 frames at 128px.
+const CHAMPION_SPRITE_BASE_PATH = '/assets/sprites';
+
+function resolveChampionSpritePath(champion) {
+  return `${CHAMPION_SPRITE_BASE_PATH}/${champion.id}.png`;
+}
+
+function isDevelopmentMode() {
+  return typeof import.meta !== 'undefined' && import.meta?.env?.DEV;
+}
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
   }
 
   preload() {
-    const FRAME_WIDTH = 128;
-    const FRAME_HEIGHT = 128;
+    const championSpriteByKey = new Map(CHAMPIONS.map((champion) => [champion.spriteKey, champion]));
+
+    if (isDevelopmentMode()) {
+      this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file) => {
+        const champion = championSpriteByKey.get(file?.key);
+        if (!champion) return;
+
+        console.warn(
+          `[BootScene] Failed to load champion sprite sheet: key="${file.key}", id="${champion.id}", src="${file.src}".`
+        );
+      });
+    }
 
     CHAMPIONS.forEach((champion) => {
-      this.load.spritesheet(
-        champion.spriteKey,
-        `/assets/sprites/${champion.name}.png`,
-        { frameWidth: FRAME_WIDTH, frameHeight: FRAME_HEIGHT }
-      );
+      const spritePath = resolveChampionSpritePath(champion);
+      this.load.spritesheet(champion.spriteKey, spritePath, SPRITE_SHEET_CONFIG);
     });
   }
 
