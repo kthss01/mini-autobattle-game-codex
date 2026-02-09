@@ -16,11 +16,22 @@ export function runMatch(teamA, teamB, opt = {}) {
 }
 
 export function createTeamFromChampionIds(name, championIds) {
+  return createTeamFromSetup(name, championIds.map((championId) => ({ championId })));
+}
+
+export function createTeamFromSetup(name, setupUnits) {
   return {
     name,
-    units: championIds.map((championId) => {
+    units: setupUnits.map((unit) => {
+      const { championId, slotId, lane, row, col, slotIndex } = unit;
       if (!CHAMPIONS_BY_ID[championId]) throw new Error(`Unknown champion id: ${championId}`);
-      return { championId };
+      const normalized = { championId };
+      if (Number.isInteger(slotId)) normalized.slotId = slotId;
+      if (Number.isInteger(lane)) normalized.lane = lane;
+      if (Number.isInteger(row)) normalized.row = row;
+      if (Number.isInteger(col)) normalized.col = col;
+      if (Number.isInteger(slotIndex)) normalized.slotIndex = slotIndex;
+      return normalized;
     })
   };
 }

@@ -59,9 +59,51 @@ export function computeSpawnSlots(teamSize, side, worldSize, formation = {}) {
       row,
       col,
       x,
-      y
+      y,
+      totalCols: cols
     };
   });
+}
+
+
+function resolveSlotId(unit, fallbackIndex) {
+  if (Number.isInteger(unit.slotId)) return unit.slotId;
+  if (Number.isInteger(unit.slotIndex)) return unit.slotIndex;
+  if (Number.isInteger(unit.lane)) return unit.lane;
+  if (Number.isInteger(unit.row) && Number.isInteger(unit.col)) return unit.row * 100 + unit.col;
+  if (Number.isInteger(unit.row)) return unit.row;
+  if (Number.isInteger(unit.col)) return unit.col;
+  return fallbackIndex;
+}
+
+function resolveSpawnPoint(slot, unit, side, worldSize, formation = {}) {
+  const xInset = formation.xInset ?? Math.round((160 / 960) * worldSize.width);
+  const rowGap = clamp(formation.rowGap ?? Math.round((42 / 960) * worldSize.width), 0, Math.round(worldSize.width * 0.2));
+  const minY = clamp(Math.round((formation.minYRatio ?? 0.14) * worldSize.height), 0, worldSize.height);
+  const maxY = clamp(Math.round((formation.maxYRatio ?? 0.86) * worldSize.height), minY, worldSize.height);
+  const xDir = side === 'A' ? 1 : -1;
+  const frontX = side === 'A' ? xInset : worldSize.width - xInset;
+
+  if (Number.isInteger(unit.row) || Number.isInteger(unit.lane)) {
+    const row = Number.isInteger(unit.row) ? unit.row : unit.lane;
+    const x = clamp(frontX - row * xDir * rowGap, 0, worldSize.width);
+    slot.x = x;
+  }
+
+  if (Number.isInteger(unit.col)) {
+    const cols = Math.max(1, slot.totalCols ?? 1);
+    const desiredSpacing = cols <= 1 ? 0 : Math.round((maxY - minY) / (cols - 1));
+    const minYSpacing = formation.minYSpacing ?? Math.round((58 / 540) * worldSize.height);
+    const maxYSpacing = formation.maxYSpacing ?? Math.round((118 / 540) * worldSize.height);
+    const ySpacing = cols <= 1 ? 0 : clamp(desiredSpacing, minYSpacing, maxYSpacing);
+    const totalHeight = ySpacing * Math.max(0, cols - 1);
+    const centerY = Math.round(worldSize.height / 2);
+    const yStart = clamp(Math.round(centerY - totalHeight / 2), minY, maxY);
+    const y = clamp(yStart + unit.col * ySpacing, minY, maxY);
+    slot.y = y;
+  }
+
+  return slot;
 }
 
 function countTags(champions) {
@@ -102,23 +144,25 @@ export function createWorld(teamA, teamB, rng, opt = {}) {
   const aSlots = computeSpawnSlots(teamA.units.length, 'A', { width, height }, {
     ...opt.formation,
     xInset,
-    slotIds: teamA.units.map((u, i) => (Number.isInteger(u.slotIndex) ? u.slotIndex : i))
+    slotIds: teamA.units.map((u, i) => resolveSlotId(u, i))
   });
   const bSlots = computeSpawnSlots(teamB.units.length, 'B', { width, height }, {
     ...opt.formation,
     xInset,
-    slotIds: teamB.units.map((u, i) => (Number.isInteger(u.slotIndex) ? u.slotIndex : i))
+    slotIds: teamB.units.map((u, i) => resolveSlotId(u, i))
   });
 
   const units = [];
   teamA.units.forEach((u, i) => {
-    const spawned = createUnit('A', u.championId, aSlots[i].x, aSlots[i].y, aBuff.buff);
-    spawned.spawnSlotId = aSlots[i].id;
+    const slot = resolveSpawnPoint(aSlots[i], u, 'A', { width, height }, opt.formation);
+    const spawned = createUnit('A', u.championId, slot.x, slot.y, aBuff.buff);
+    spawned.spawnSlotId = slot.id;
     units.push(spawned);
   });
   teamB.units.forEach((u, i) => {
-    const spawned = createUnit('B', u.championId, bSlots[i].x, bSlots[i].y, bBuff.buff);
-    spawned.spawnSlotId = bSlots[i].id;
+    const slot = resolveSpawnPoint(bSlots[i], u, 'B', { width, height }, opt.formation);
+    const spawned = createUnit('B', u.championId, slot.x, slot.y, bBuff.buff);
+    spawned.spawnSlotId = slot.id;
     units.push(spawned);
   });
 

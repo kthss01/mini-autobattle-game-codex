@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHAMPIONS } from '../src/index.js';
+import { CHAMPIONS, createTeamFromSetup } from '../src/index.js';
 import { createWorld, computeSpawnSlots } from '../src/sim/World.js';
 
 describe('world spawn slot formation', () => {
@@ -13,6 +13,25 @@ describe('world spawn slot formation', () => {
       expect(slot.y).toBeGreaterThanOrEqual(0);
       expect(slot.y).toBeLessThanOrEqual(450);
     }
+  });
+
+
+
+  it('prioritizes explicit position fields and falls back when missing', () => {
+    const ids = CHAMPIONS.slice(0, 3).map((c) => c.id);
+    const teamA = createTeamFromSetup('A', [
+      { championId: ids[0], slotId: 42, row: 1, col: 1 },
+      { championId: ids[1], lane: 2, col: 0 },
+      { championId: ids[2] }
+    ]);
+    const teamB = createTeamFromSetup('B', ids.map((championId) => ({ championId })));
+
+    const world = createWorld(teamA, teamB, Math.random, {});
+    const unitsA = world.units.filter((u) => u.teamId === 'A');
+
+    expect(unitsA.map((u) => u.spawnSlotId)).toEqual([42, 2, 2]);
+    expect(unitsA[0].x).not.toEqual(unitsA[2].x);
+    expect(unitsA[0].y).not.toEqual(unitsA[2].y);
   });
 
   it('propagates slot index to spawned unit slot id', () => {
