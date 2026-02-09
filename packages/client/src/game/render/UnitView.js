@@ -8,6 +8,21 @@ const ROLE_LABEL_MAP = {
   [UNIT_ROLES.SUPPORT]: 'Support'
 };
 
+const VISUAL_STATES = Object.freeze({
+  IDLE: 'idle',
+  MOVE: 'move',
+  ATTACK: 'attack',
+  CAST: 'cast',
+  DEATH: 'death'
+});
+
+const SPRITE_SIZE = 48;
+const ROLE_LABEL_OFFSET_Y = SPRITE_SIZE * 0.62;
+const HP_BAR_OFFSET_Y = -(SPRITE_SIZE * 0.62);
+const HP_BAR_WIDTH = 36;
+const HP_BAR_HEIGHT = 5;
+const DEAD_ALPHA = 0.6;
+
 function resolveRoleLabel(role) {
   const normalizedRole = typeof role === 'string' ? role.toLowerCase() : '';
   return ROLE_LABEL_MAP[normalizedRole] ?? 'Unknown';
@@ -42,48 +57,64 @@ export class UnitView {
     const teamColor = unit.teamId === 'A' ? 0x38bdf8 : 0xf87171;
     const textureKey = resolveTextureKey(unit);
 
+    this.visualState = null;
+    this.lastX = unit.x;
+    this.lastY = unit.y;
+    this.facingDirectionX = unit.teamId === 'B' ? -1 : 1;
+
     if (textureKey && scene.textures.exists(textureKey)) {
-      this.body = scene.add.sprite(unit.x, unit.y, textureKey, 0).setDisplaySize(48, 48);
+      this.body = scene.add.sprite(unit.x, unit.y, textureKey, 0).setDisplaySize(SPRITE_SIZE, SPRITE_SIZE);
       this.body.setTint(teamColor);
       this.bindAnimationTransition(unit.championId);
-      this.playAnimation(unit, 'idle');
+      this.applyVisualState(unit, VISUAL_STATES.IDLE);
     } else {
       this.body = createFallbackBody(scene, unit, teamColor);
     }
 
     this.roleLabel = scene
-      .add.text(unit.x, unit.y + 30, this.roleLabelText, {
+      .add.text(unit.x, unit.y + ROLE_LABEL_OFFSET_Y, this.roleLabelText, {
         fontSize: '11px',
         color: '#e5e7eb',
         fontStyle: 'bold'
       })
       .setOrigin(0.5, 0);
 
-    this.hpBg = scene.add.rectangle(unit.x, unit.y - 30, 36, 5, 0x111827).setOrigin(0.5);
-    this.hpBar = scene.add.rectangle(unit.x - 18, unit.y - 30, 36, 5, 0x22c55e).setOrigin(0, 0.5);
+    this.hpBg = scene.add.rectangle(unit.x, unit.y + HP_BAR_OFFSET_Y, HP_BAR_WIDTH, HP_BAR_HEIGHT, 0x111827).setOrigin(0.5);
+    this.hpBar = scene
+      .add.rectangle(unit.x - HP_BAR_WIDTH / 2, unit.y + HP_BAR_OFFSET_Y, HP_BAR_WIDTH, HP_BAR_HEIGHT, 0x22c55e)
+      .setOrigin(0, 0.5);
   }
 
   update(unit) {
     this.body.setPosition(unit.x, unit.y);
 
     if (this.body.type === 'Sprite') {
-      this.body.setFlipX(unit.teamId === 'B');
-      this.syncAnimationState(unit);
+      this.syncFacing(unit);
+      this.syncVisualState(unit);
     }
 
-    const currentAlpha = unit.alive ? 1 : 0.25;
+    const currentAlpha = unit.alive ? 1 : DEAD_ALPHA;
     this.body.setAlpha(currentAlpha);
 
-    this.roleLabel.setPosition(unit.x, unit.y + 30);
+    this.roleLabel.setPosition(unit.x, unit.y + ROLE_LABEL_OFFSET_Y);
     this.roleLabel.setAlpha(unit.alive ? 0.95 : 0.4);
 
-    this.hpBg.setPosition(unit.x, unit.y - 30);
-    this.hpBar.setPosition(unit.x - 18, unit.y - 30);
-    this.hpBar.width = 36 * (unit.hp / Math.max(1, unit.maxHp));
+    this.hpBg.setPosition(unit.x, unit.y + HP_BAR_OFFSET_Y);
+    this.hpBar.setPosition(unit.x - HP_BAR_WIDTH / 2, unit.y + HP_BAR_OFFSET_Y);
+    this.hpBar.width = HP_BAR_WIDTH * (unit.hp / Math.max(1, unit.maxHp));
+
+    this.lastX = unit.x;
+    this.lastY = unit.y;
   }
 
   bindAnimationTransition(championId) {
     this.body.on('animationcomplete', (animation) => {
+      if (this.visualState === VISUAL_STATES.DEATH) {
+        this.body.stop();
+        this.body.setFrame(animation?.getLastFrame());
+        return;
+      }
+
       const transitionName = resolveAnimationTransitionName(animation?.key);
       if (!transitionName) return;
 
@@ -93,29 +124,63 @@ export class UnitView {
     });
   }
 
-  syncAnimationState(unit) {
+  syncVisualState(unit) {
+    const nextVisualState = this.resolveVisualState(unit);
+    this.applyVisualState(unit, nextVisualState);
+  }
+
+  resolveVisualState(unit) {
     if (!unit.alive) {
-      this.playAnimation(unit, 'death');
-      return;
+      return VISUAL_STATES.DEATH;
     }
 
     const intentType = unit.intent?.type;
     if (intentType === 'CAST') {
-      this.playAnimation(unit, 'cast');
-      return;
+      return VISUAL_STATES.CAST;
     }
 
     if (intentType === 'ATTACK' && unit.attackTimer > 0) {
-      this.playAnimation(unit, 'attack');
-      return;
+      return VISUAL_STATES.ATTACK;
     }
 
     if (intentType === 'MOVE') {
-      this.playAnimation(unit, 'move');
-      return;
+      return VISUAL_STATES.MOVE;
     }
 
-    this.playAnimation(unit, 'idle');
+    return VISUAL_STATES.IDLE;
+  }
+
+  applyVisualState(unit, nextVisualState) {
+    if (nextVisualState === this.visualState) return;
+    this.visualState = nextVisualState;
+    this.playAnimation(unit, nextVisualState);
+  }
+
+  syncFacing(unit) {
+    const moveDx = unit.x - this.lastX;
+    const activeDirection = Math.abs(moveDx) > 0.1 ? moveDx : this.resolveIntentDirection(unit);
+    if (Math.abs(activeDirection) > 0.1) this.facingDirectionX = activeDirection;
+    this.body.setFlipX(this.facingDirectionX < 0);
+  }
+
+  resolveIntentDirection(unit) {
+    const intent = unit.intent;
+    if (!intent) return 0;
+
+    if (intent.type === 'MOVE' && typeof intent.x === 'number') {
+      return intent.x - unit.x;
+    }
+
+    if ((intent.type === 'ATTACK' || intent.type === 'CAST') && intent.targetId) {
+      const target = this.scene?.match?.world?.units?.find((candidate) => candidate.id === intent.targetId);
+      if (target) return target.x - unit.x;
+    }
+
+    if (intent.type === 'CAST' && intent.point?.x != null) {
+      return intent.point.x - unit.x;
+    }
+
+    return 0;
   }
 
   playAnimation(unit, action) {
