@@ -6,10 +6,13 @@ import { selectPositionInfo } from '../selectors/positionInfo';
 
 const SPRITE_SHEET_FRAME_WIDTH = 256;
 const SPRITE_SHEET_FRAME_HEIGHT = 256;
+const SPRITE_SHEET_COLUMNS = 4;
+const SPRITE_SHEET_ROWS = 6;
 const SPRITE_SHEET_CONFIG = {
   frameWidth: SPRITE_SHEET_FRAME_WIDTH,
   frameHeight: SPRITE_SHEET_FRAME_HEIGHT
 };
+const TRANSPARENCY_KEY_COLOR_THRESHOLD = 248;
 
 // Current champion sheets are 1024x1536, which maps to 4x6 frames at 256px.
 const CHAMPION_SPRITE_BASE_PATH = `${resolveBaseUrl()}assets/sprites`;
@@ -61,6 +64,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    this.rebuildOpaqueChampionSheetsWithTransparency();
+
     this.slotAssignments = CHAMPIONS.slice(0, TEAM_SIZE).map((champion, slotIndex) => ({
       slotIndex,
       championId: champion.id
@@ -71,6 +76,76 @@ export class BootScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyStartMenuOverlay());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.destroyStartMenuOverlay());
+  }
+
+  rebuildOpaqueChampionSheetsWithTransparency() {
+    CHAMPIONS.forEach((champion) => {
+      const textureKey = champion.spriteKey;
+      if (!this.textures.exists(textureKey)) return;
+
+      const sourceImage = this.textures.get(textureKey)?.getSourceImage();
+      if (!sourceImage) return;
+
+      const hasPixelAlpha = this.detectPixelTransparency(sourceImage);
+      if (hasPixelAlpha) return;
+
+      const rebuiltTexture = this.textures.createCanvas(`${textureKey}-chroma`, sourceImage.width, sourceImage.height);
+      const context = rebuiltTexture.getContext();
+      context.clearRect(0, 0, sourceImage.width, sourceImage.height);
+      context.drawImage(sourceImage, 0, 0);
+
+      const imageData = context.getImageData(0, 0, sourceImage.width, sourceImage.height);
+      const pixels = imageData.data;
+
+      for (let index = 0; index < pixels.length; index += 4) {
+        const red = pixels[index];
+        const green = pixels[index + 1];
+        const blue = pixels[index + 2];
+        if (
+          red >= TRANSPARENCY_KEY_COLOR_THRESHOLD &&
+          green >= TRANSPARENCY_KEY_COLOR_THRESHOLD &&
+          blue >= TRANSPARENCY_KEY_COLOR_THRESHOLD
+        ) {
+          pixels[index + 3] = 0;
+        }
+      }
+
+      context.putImageData(imageData, 0, 0);
+      rebuiltTexture.refresh();
+
+      this.textures.remove(textureKey);
+      this.textures.renameTexture(`${textureKey}-chroma`, textureKey);
+
+      for (let row = 0; row < SPRITE_SHEET_ROWS; row += 1) {
+        for (let col = 0; col < SPRITE_SHEET_COLUMNS; col += 1) {
+          const frameIndex = row * SPRITE_SHEET_COLUMNS + col;
+          this.textures.get(textureKey).add(
+            frameIndex,
+            0,
+            col * SPRITE_SHEET_FRAME_WIDTH,
+            row * SPRITE_SHEET_FRAME_HEIGHT,
+            SPRITE_SHEET_FRAME_WIDTH,
+            SPRITE_SHEET_FRAME_HEIGHT
+          );
+        }
+      }
+    });
+  }
+
+  detectPixelTransparency(sourceImage) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = sourceImage.width;
+    tempCanvas.height = sourceImage.height;
+    const context = tempCanvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return false;
+
+    context.drawImage(sourceImage, 0, 0);
+    const pixels = context.getImageData(0, 0, sourceImage.width, sourceImage.height).data;
+    for (let index = 3; index < pixels.length; index += 4) {
+      if (pixels[index] < 255) return true;
+    }
+
+    return false;
   }
 
   createStartMenuOverlay() {
