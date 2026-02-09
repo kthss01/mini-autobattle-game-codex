@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { CHAMPIONS } from '@autobattle/sim';
 import { createRandomSeed, parseSeedInput } from '../utils/seed';
-import { createDefaultMatchSetup } from '../types/MatchSetup';
+import { createDefaultMatchSetup, TEAM_SIZE } from '../types/MatchSetup';
+import { selectPositionInfo } from '../selectors/positionInfo';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -9,6 +10,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    this.slotAssignments = CHAMPIONS.slice(0, TEAM_SIZE).map((champion, slotIndex) => ({
+      slotIndex,
+      championId: champion.id
+    }));
+    this.selectedSlotIndex = 0;
+
     this.createStartMenuOverlay();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyStartMenuOverlay());
@@ -53,6 +60,12 @@ export class BootScene extends Phaser.Scene {
     randomButton.style.padding = '6px 10px';
     randomButton.style.cursor = 'pointer';
 
+    const slotsWrapper = document.createElement('div');
+    slotsWrapper.style.display = 'flex';
+    slotsWrapper.style.flexDirection = 'column';
+    slotsWrapper.style.gap = '6px';
+    slotsWrapper.style.marginTop = '4px';
+
     const startButton = document.createElement('button');
     startButton.type = 'button';
     startButton.textContent = 'Start';
@@ -64,6 +77,64 @@ export class BootScene extends Phaser.Scene {
     message.style.fontSize = '12px';
     message.style.minHeight = '16px';
 
+    const positionPanel = this.createPositionInfoPanel(appRoot);
+
+    const refreshPositionPanel = () => {
+      const slot = this.slotAssignments[this.selectedSlotIndex] ?? { slotIndex: this.selectedSlotIndex };
+      const info = selectPositionInfo({ slot });
+      this.renderPositionInfo(positionPanel, info);
+    };
+
+    const renderSlots = () => {
+      slotsWrapper.replaceChildren();
+
+      this.slotAssignments.forEach((slot) => {
+        const row = document.createElement('label');
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.alignItems = 'center';
+        row.style.padding = '6px';
+        row.style.borderRadius = '6px';
+        row.style.background = slot.slotIndex === this.selectedSlotIndex ? 'rgba(59, 130, 246, 0.18)' : 'rgba(255,255,255,0.04)';
+        row.style.border = slot.slotIndex === this.selectedSlotIndex ? '1px solid #60a5fa' : '1px solid transparent';
+        row.style.cursor = 'pointer';
+
+        const slotLabel = document.createElement('span');
+        slotLabel.style.color = '#e5e7eb';
+        slotLabel.style.minWidth = '62px';
+        slotLabel.textContent = `Slot ${slot.slotIndex + 1}`;
+
+        const select = document.createElement('select');
+        select.style.padding = '4px 6px';
+        select.style.flex = '1';
+        CHAMPIONS.forEach((champion) => {
+          const option = document.createElement('option');
+          option.value = champion.id;
+          option.textContent = champion.name;
+          option.selected = champion.id === slot.championId;
+          select.appendChild(option);
+        });
+
+        row.addEventListener('click', () => {
+          this.selectedSlotIndex = slot.slotIndex;
+          renderSlots();
+          refreshPositionPanel();
+        });
+
+        select.addEventListener('click', (event) => event.stopPropagation());
+        select.addEventListener('change', (event) => {
+          slot.championId = event.target.value;
+          this.selectedSlotIndex = slot.slotIndex;
+          renderSlots();
+          refreshPositionPanel();
+        });
+
+        row.appendChild(slotLabel);
+        row.appendChild(select);
+        slotsWrapper.appendChild(row);
+      });
+    };
+
     const startMatch = () => {
       const parsed = parseSeedInput(input.value);
       if (!parsed.ok) {
@@ -72,10 +143,9 @@ export class BootScene extends Phaser.Scene {
       }
 
       message.textContent = '';
-      const payload = createDefaultMatchSetup(
-        parsed.seed,
-        CHAMPIONS.map((champion) => champion.id)
-      );
+      const teamAChampionIds = this.slotAssignments.map((slot) => slot.championId);
+      const payload = createDefaultMatchSetup(parsed.seed, [...teamAChampionIds, ...CHAMPIONS.slice(TEAM_SIZE).map((champion) => champion.id)]);
+      payload.teams.A.slots = this.slotAssignments.map((slot) => ({ ...slot }));
       this.scene.start('MatchScene', payload);
     };
 
@@ -95,17 +165,77 @@ export class BootScene extends Phaser.Scene {
 
     wrapper.appendChild(title);
     wrapper.appendChild(inputRow);
+    wrapper.appendChild(slotsWrapper);
     wrapper.appendChild(startButton);
     wrapper.appendChild(message);
 
     appRoot.appendChild(wrapper);
 
     this.startMenuOverlay = wrapper;
+    this.positionInfoPanel = positionPanel;
+
+    renderSlots();
+    refreshPositionPanel();
+  }
+
+  createPositionInfoPanel(appRoot) {
+    const panel = document.createElement('div');
+    panel.style.position = 'absolute';
+    panel.style.right = '20px';
+    panel.style.top = '20px';
+    panel.style.width = '300px';
+    panel.style.padding = '12px';
+    panel.style.background = 'rgba(17, 24, 39, 0.9)';
+    panel.style.border = '1px solid #4b5563';
+    panel.style.borderRadius = '8px';
+    panel.style.color = '#f9fafb';
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+    panel.style.gap = '6px';
+    panel.style.zIndex = '10';
+
+    appRoot.appendChild(panel);
+    return panel;
+  }
+
+  renderPositionInfo(panel, info) {
+    panel.replaceChildren();
+
+    const heading = document.createElement('strong');
+    heading.textContent = `Slot ${info.position + 1} · ${info.positionLabel}`;
+
+    const recommended = document.createElement('div');
+    recommended.textContent = `추천 역할: ${info.recommendedRoles.join(', ')}`;
+
+    const assigned = document.createElement('div');
+    assigned.textContent = info.assignedChampion
+      ? `배정 챔피언: ${info.assignedChampion.name} (${info.assignedChampion.role})`
+      : '배정 챔피언: 없음';
+
+    const stats = document.createElement('div');
+    stats.textContent = info.coreStats
+      ? `핵심 스탯 - HP ${info.coreStats.hp} / 공격 ${info.coreStats.attack} / 사거리 ${info.coreStats.range} / 공속 ${info.coreStats.attackSpeed}`
+      : '핵심 스탯: 챔피언 배정 필요';
+
+    const skills = document.createElement('div');
+    skills.textContent = `스킬: ${info.skillSummary}`;
+
+    panel.appendChild(heading);
+    panel.appendChild(recommended);
+    panel.appendChild(assigned);
+    panel.appendChild(stats);
+    panel.appendChild(skills);
   }
 
   destroyStartMenuOverlay() {
-    if (!this.startMenuOverlay) return;
-    this.startMenuOverlay.remove();
-    this.startMenuOverlay = null;
+    if (this.startMenuOverlay) {
+      this.startMenuOverlay.remove();
+      this.startMenuOverlay = null;
+    }
+
+    if (this.positionInfoPanel) {
+      this.positionInfoPanel.remove();
+      this.positionInfoPanel = null;
+    }
   }
 }
