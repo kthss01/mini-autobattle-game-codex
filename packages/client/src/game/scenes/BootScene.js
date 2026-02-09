@@ -24,8 +24,8 @@ function resolveChampionSpritePath(champion) {
 }
 
 function resolveBaseUrl() {
-  const base = typeof import.meta !== 'undefined' ? import.meta?.env?.BASE_URL : '/';
-  if (!base) return '/';
+  const base = typeof import.meta !== 'undefined' ? import.meta?.env?.BASE_URL : './';
+  if (!base) return './';
   return base.endsWith('/') ? base : `${base}/`;
 }
 
@@ -39,9 +39,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
+    const baseUrl = resolveBaseUrl();
     const championSpriteByKey = new Map(CHAMPIONS.map((champion) => [champion.spriteKey, champion]));
 
     if (isDevelopmentMode()) {
+      console.info(`[BootScene] import.meta.env.BASE_URL = "${baseUrl}"`);
       this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file) => {
         const champion = championSpriteByKey.get(file?.key);
         if (!champion) return;
