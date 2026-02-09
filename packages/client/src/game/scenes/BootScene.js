@@ -12,7 +12,7 @@ const SPRITE_SHEET_CONFIG = {
 };
 
 // Current champion sheets are 1024x1536, which maps to 4x6 frames at 256px.
-const CHAMPION_SPRITE_BASE_PATH = 'assets/sprites';
+const CHAMPION_SPRITE_BASE_PATH = `${resolveBaseUrl()}assets/sprites`;
 const SPRITE_PATH_FALLBACK_BY_CHAMPION_ID = Object.freeze({
   // 임프 전용 시트가 아직 없어서 임시로 소환사 시트를 재사용합니다.
   imp_minion: 'summoner_witch'
@@ -22,6 +22,13 @@ function resolveChampionSpritePath(champion) {
   const spriteSourceId = SPRITE_PATH_FALLBACK_BY_CHAMPION_ID[champion.id] ?? champion.id;
   return `${CHAMPION_SPRITE_BASE_PATH}/${spriteSourceId}.png`;
 }
+
+function resolveBaseUrl() {
+  const base = typeof import.meta !== 'undefined' ? import.meta?.env?.BASE_URL : '/';
+  if (!base) return '/';
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
 function isDevelopmentMode() {
   return typeof import.meta !== 'undefined' && import.meta?.env?.DEV;
 }
