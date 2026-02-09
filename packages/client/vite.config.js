@@ -1,9 +1,8 @@
 import { defineConfig } from 'vite';
 
-const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1];
 export default defineConfig({
-  // Prefer repository subpath when available (e.g. GitHub Pages project site).
-  base: repoName ? `/${repoName}/` : '/',
+  // Use relative asset URLs so GitHub Pages works for both user sites (/) and project sites (/repo/).
+  base: './',
   server: {
     host: '0.0.0.0',
     port: 5173
