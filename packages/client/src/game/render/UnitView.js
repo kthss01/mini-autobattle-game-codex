@@ -1,4 +1,4 @@
-import { UNIT_ROLES } from '@autobattle/sim';
+import { CHAMPIONS_BY_ID, UNIT_ROLES } from '@autobattle/sim';
 
 const ROLE_LABEL_MAP = {
   [UNIT_ROLES.TANK]: 'Tank',
@@ -12,9 +12,20 @@ function resolveRoleLabel(role) {
   return ROLE_LABEL_MAP[normalizedRole] ?? 'Unknown';
 }
 
+function resolveChampionRenderMeta(championId) {
+  if (!championId) return null;
+  return CHAMPIONS_BY_ID[championId] ?? null;
+}
+
 function resolveTextureKey(unit) {
-  if (!unit?.championId) return null;
-  return `champion-${unit.championId}`;
+  const championMeta = resolveChampionRenderMeta(unit?.championId);
+  return championMeta?.spriteKey ?? null;
+}
+
+export function resolveUnitAnimationKey(championId, animationName) {
+  const championMeta = resolveChampionRenderMeta(championId);
+  if (!championMeta) return null;
+  return championMeta.animations?.[animationName] ?? null;
 }
 
 function createFallbackBody(scene, unit, color) {
