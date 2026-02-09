@@ -22,6 +22,14 @@ const HP_BAR_OFFSET_Y = -(SPRITE_SIZE * 0.62);
 const HP_BAR_WIDTH = 36;
 const HP_BAR_HEIGHT = 5;
 const DEAD_ALPHA = 0.6;
+const VISUAL_STATE_FALLBACK_CHAIN = Object.freeze({
+  idle: [],
+  move: ['idle'],
+  attack: ['idle'],
+  cast: ['attack', 'idle'],
+  death: ['idle']
+});
+const TRANSIENT_STATES = new Set([VISUAL_STATES.ATTACK, VISUAL_STATES.CAST]);
 
 function resolveRoleLabel(role) {
   const normalizedRole = typeof role === 'string' ? role.toLowerCase() : '';
@@ -41,7 +49,14 @@ function resolveTextureKey(unit) {
 export function resolveUnitAnimationKey(championId, animationName) {
   const championMeta = resolveChampionRenderMeta(championId);
   if (!championMeta) return null;
-  return championMeta.animations?.[animationName] ?? null;
+
+  const actions = [animationName, ...(VISUAL_STATE_FALLBACK_CHAIN[animationName] || [])];
+  for (const action of actions) {
+    const key = championMeta.animations?.[action];
+    if (key) return key;
+  }
+
+  return null;
 }
 
 function createFallbackBody(scene, unit, color) {
@@ -61,6 +76,7 @@ export class UnitView {
     this.lastX = unit.x;
     this.lastY = unit.y;
     this.facingDirectionX = unit.teamId === 'B' ? -1 : 1;
+    this.lastLoggedState = null;
 
     if (textureKey && scene.textures.exists(textureKey)) {
       this.body = scene.add.sprite(unit.x, unit.y, textureKey, 0).setDisplaySize(SPRITE_SIZE, SPRITE_SIZE);
@@ -126,7 +142,15 @@ export class UnitView {
 
   syncVisualState(unit) {
     const nextVisualState = this.resolveVisualState(unit);
+    if (this.shouldDelayStateTransition(nextVisualState)) return;
     this.applyVisualState(unit, nextVisualState);
+  }
+
+  shouldDelayStateTransition(nextVisualState) {
+    if (!this.body?.anims?.isPlaying) return false;
+    if (!TRANSIENT_STATES.has(this.visualState)) return false;
+    if (nextVisualState === VISUAL_STATES.DEATH) return false;
+    return nextVisualState !== this.visualState;
   }
 
   resolveVisualState(unit) {
@@ -152,8 +176,17 @@ export class UnitView {
 
   applyVisualState(unit, nextVisualState) {
     if (nextVisualState === this.visualState) return;
+    this.logStateTransition(unit, this.visualState, nextVisualState);
     this.visualState = nextVisualState;
     this.playAnimation(unit, nextVisualState);
+  }
+
+  logStateTransition(unit, fromState, toState) {
+    if (unit.championId !== 'tank_guard' || fromState === toState) return;
+    const from = fromState ?? '-';
+    const line = `[AnimDebug] ${unit.id} ${from} -> ${toState}`;
+    this.scene?.recordAnimationDebugLine?.(line);
+    this.lastLoggedState = toState;
   }
 
   syncFacing(unit) {
