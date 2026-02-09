@@ -20,7 +20,7 @@ function formatLogEntry(entry) {
 function toMatchTeam(teamSetup) {
   const units = [...(teamSetup?.slots || [])]
     .sort((a, b) => a.slotIndex - b.slotIndex)
-    .map((slot) => ({ championId: slot.championId }));
+    .map((slot) => ({ championId: slot.championId, slotIndex: slot.slotIndex }));
   return { name: teamSetup?.id, units };
 }
 

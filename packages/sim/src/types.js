@@ -83,6 +83,7 @@
 /**
  * @typedef {Object} TeamUnitInput
  * @property {string} championId
+ * @property {number} [slotIndex]
  */
 
 /**

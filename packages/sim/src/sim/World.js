@@ -2,6 +2,68 @@ import { CHAMPIONS_BY_ID } from '../data/champions.js';
 import { TEAM_SYNERGIES } from '../data/synergies.js';
 import { createUnit, resetUnitIdCounter } from './Unit.js';
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * @param {number} teamSize
+ * @param {'A'|'B'} side
+ * @param {{width:number, height:number}} worldSize
+ * @param {{
+ *   xInset?: number,
+ *   slotIds?: number[],
+ *   multiRowThreshold?: number,
+ *   maxRows?: number,
+ *   rowGap?: number,
+ *   minYRatio?: number,
+ *   maxYRatio?: number,
+ *   minYSpacing?: number,
+ *   maxYSpacing?: number
+ * }} [formation]
+ */
+export function computeSpawnSlots(teamSize, side, worldSize, formation = {}) {
+  const width = worldSize.width;
+  const height = worldSize.height;
+  const xInset = formation.xInset ?? Math.round((160 / 960) * width);
+  const slotIds = formation.slotIds || [];
+
+  const minY = clamp(Math.round((formation.minYRatio ?? 0.14) * height), 0, height);
+  const maxY = clamp(Math.round((formation.maxYRatio ?? 0.86) * height), minY, height);
+  const centerY = Math.round(height / 2);
+
+  const multiRowThreshold = formation.multiRowThreshold ?? 4;
+  const maxRows = Math.max(1, formation.maxRows ?? 2);
+  const rows = teamSize > multiRowThreshold ? Math.min(maxRows, 2) : 1;
+  const cols = Math.max(1, Math.ceil(teamSize / rows));
+
+  const minYSpacing = formation.minYSpacing ?? Math.round((58 / 540) * height);
+  const maxYSpacing = formation.maxYSpacing ?? Math.round((118 / 540) * height);
+  const desiredSpacing = cols <= 1 ? 0 : Math.round((maxY - minY) / (cols - 1));
+  const ySpacing = cols <= 1 ? 0 : clamp(desiredSpacing, minYSpacing, maxYSpacing);
+  const totalHeight = ySpacing * Math.max(0, cols - 1);
+  const yStart = clamp(Math.round(centerY - totalHeight / 2), minY, maxY);
+
+  const rowGap = clamp(formation.rowGap ?? Math.round((42 / 960) * width), 0, Math.round(width * 0.2));
+  const frontX = side === 'A' ? xInset : width - xInset;
+  const xDir = side === 'A' ? 1 : -1;
+
+  return Array.from({ length: teamSize }, (_, index) => {
+    const row = index % rows;
+    const col = Math.floor(index / rows);
+    const x = clamp(frontX - row * xDir * rowGap, 0, width);
+    const y = clamp(yStart + col * ySpacing, minY, maxY);
+    return {
+      id: Number.isInteger(slotIds[index]) ? slotIds[index] : index,
+      side,
+      row,
+      col,
+      x,
+      y
+    };
+  });
+}
+
 function countTags(champions) {
   /** @type {Record<string, number>} */
   const result = Object.create(null);
@@ -30,8 +92,6 @@ export function createWorld(teamA, teamB, rng, opt = {}) {
   const height = 450;
   const dt = 1 / 30;
   const xInset = Math.round((160 / 960) * width);
-  const yStart = Math.round((160 / 540) * height);
-  const ySpacing = Math.round((100 / 540) * height);
 
   const aChampions = teamA.units.map((u) => CHAMPIONS_BY_ID[u.championId]);
   const bChampions = teamB.units.map((u) => CHAMPIONS_BY_ID[u.championId]);
@@ -39,9 +99,28 @@ export function createWorld(teamA, teamB, rng, opt = {}) {
   const aBuff = resolveTeamBuff(aChampions);
   const bBuff = resolveTeamBuff(bChampions);
 
+  const aSlots = computeSpawnSlots(teamA.units.length, 'A', { width, height }, {
+    ...opt.formation,
+    xInset,
+    slotIds: teamA.units.map((u, i) => (Number.isInteger(u.slotIndex) ? u.slotIndex : i))
+  });
+  const bSlots = computeSpawnSlots(teamB.units.length, 'B', { width, height }, {
+    ...opt.formation,
+    xInset,
+    slotIds: teamB.units.map((u, i) => (Number.isInteger(u.slotIndex) ? u.slotIndex : i))
+  });
+
   const units = [];
-  teamA.units.forEach((u, i) => units.push(createUnit('A', u.championId, xInset, yStart + i * ySpacing, aBuff.buff)));
-  teamB.units.forEach((u, i) => units.push(createUnit('B', u.championId, width - xInset, yStart + i * ySpacing, bBuff.buff)));
+  teamA.units.forEach((u, i) => {
+    const spawned = createUnit('A', u.championId, aSlots[i].x, aSlots[i].y, aBuff.buff);
+    spawned.spawnSlotId = aSlots[i].id;
+    units.push(spawned);
+  });
+  teamB.units.forEach((u, i) => {
+    const spawned = createUnit('B', u.championId, bSlots[i].x, bSlots[i].y, bBuff.buff);
+    spawned.spawnSlotId = bSlots[i].id;
+    units.push(spawned);
+  });
 
   return {
     width,
