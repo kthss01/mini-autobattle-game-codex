@@ -26,6 +26,9 @@ export class EndScene extends Phaser.Scene {
     this.appliedSeed = Number.isSafeInteger(Number(data?.seed)) ? Number(data.seed) : 123;
     this.stats = data?.stats ?? { units: [], scoreA: 0, scoreB: 0 };
     this.combatLog = Array.isArray(data?.combatLog) ? data.combatLog : [];
+    this.nextMatchSetup = data?.nextMatchSetup ?? null;
+    this.logPage = 0;
+    this.logVisible = false;
 
     if ((!this.stats.scoreA && !this.stats.scoreB) && this.stats.units.length > 0) {
       this.stats.scoreA = computeTeamScore(this.stats.units, 'A');
@@ -65,7 +68,13 @@ export class EndScene extends Phaser.Scene {
       padding: { x: 8, y: 4 }
     });
     replaySameSeed.setInteractive({ useHandCursor: true });
-    replaySameSeed.on('pointerdown', () => this.scene.start('MatchScene', { seed: this.appliedSeed }));
+    replaySameSeed.on('pointerdown', () => {
+      if (this.nextMatchSetup) {
+        this.scene.start('MatchScene', this.nextMatchSetup);
+        return;
+      }
+      this.scene.start('MatchScene', { seed: this.appliedSeed });
+    });
 
     const replayRandomSeed = this.add.text(20, y + 72, 'Restart new seed', {
       backgroundColor: '#1f2937',
@@ -73,7 +82,17 @@ export class EndScene extends Phaser.Scene {
       padding: { x: 8, y: 4 }
     });
     replayRandomSeed.setInteractive({ useHandCursor: true });
-    replayRandomSeed.on('pointerdown', () => this.scene.start('MatchScene', { seed: createRandomSeed() }));
+    replayRandomSeed.on('pointerdown', () => {
+      const randomSeed = createRandomSeed();
+      if (this.nextMatchSetup) {
+        this.scene.start('MatchScene', {
+          ...this.nextMatchSetup,
+          seed: randomSeed
+        });
+        return;
+      }
+      this.scene.start('MatchScene', { seed: randomSeed });
+    });
   }
 
   createLogOverlay() {

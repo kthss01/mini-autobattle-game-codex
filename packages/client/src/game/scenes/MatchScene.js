@@ -44,6 +44,10 @@ export class MatchScene extends Phaser.Scene {
     this.teamSetup = data?.teams || null;
     this.acc = 0;
     this.speedMultiplier = 1;
+    this.isPaused = false;
+    this.logPage = 0;
+    this.logVisible = false;
+    this.lastRenderedLogLength = -1;
   }
 
   create() {
@@ -222,7 +226,12 @@ export class MatchScene extends Phaser.Scene {
             seed: this.match.options.seed,
             stats,
             logPolicy: LOG_POLICY,
-            combatLog: [...this.match.world.log]
+            combatLog: [...this.match.world.log],
+            nextMatchSetup: {
+              seed: this.match.options.seed,
+              options: { ...this.matchOptions },
+              teams: this.teamSetup
+            }
           };
 
           this.scene.start('EndScene', endPayload);
