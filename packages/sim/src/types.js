@@ -11,9 +11,20 @@
  */
 
 /**
+ * @typedef {Object} ChampionAnimations
+ * @property {string} idle
+ * @property {string} move
+ * @property {string} attack
+ * @property {string} [cast]
+ * @property {string} death
+ */
+
+/**
  * @typedef {Object} ChampionDef
  * @property {string} id
  * @property {string} name
+ * @property {string} spriteKey
+ * @property {ChampionAnimations} animations
  * @property {string} role
  * @property {Tag[]} tags
  * @property {BaseStats} base

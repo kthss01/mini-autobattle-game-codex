@@ -15,7 +15,7 @@ export class BootScene extends Phaser.Scene {
 
     CHAMPIONS.forEach((champion) => {
       this.load.spritesheet(
-        `champion-${champion.id}`,
+        champion.spriteKey,
         `/assets/sprites/${champion.name}.png`,
         { frameWidth: FRAME_WIDTH, frameHeight: FRAME_HEIGHT }
       );
