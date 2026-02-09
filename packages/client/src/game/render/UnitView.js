@@ -1,4 +1,5 @@
 import { CHAMPIONS_BY_ID, UNIT_ROLES } from '@autobattle/sim';
+import { resolveAnimationTransitionName } from './animationRegistry.js';
 
 const ROLE_LABEL_MAP = {
   [UNIT_ROLES.TANK]: 'Tank',
@@ -44,6 +45,8 @@ export class UnitView {
     if (textureKey && scene.textures.exists(textureKey)) {
       this.body = scene.add.sprite(unit.x, unit.y, textureKey, 0).setDisplaySize(48, 48);
       this.body.setTint(teamColor);
+      this.bindAnimationTransition(unit.championId);
+      this.playAnimation(unit, 'idle');
     } else {
       this.body = createFallbackBody(scene, unit, teamColor);
     }
@@ -65,6 +68,7 @@ export class UnitView {
 
     if (this.body.type === 'Sprite') {
       this.body.setFlipX(unit.teamId === 'B');
+      this.syncAnimationState(unit);
     }
 
     const currentAlpha = unit.alive ? 1 : 0.25;
@@ -76,6 +80,48 @@ export class UnitView {
     this.hpBg.setPosition(unit.x, unit.y - 30);
     this.hpBar.setPosition(unit.x - 18, unit.y - 30);
     this.hpBar.width = 36 * (unit.hp / Math.max(1, unit.maxHp));
+  }
+
+  bindAnimationTransition(championId) {
+    this.body.on('animationcomplete', (animation) => {
+      const transitionName = resolveAnimationTransitionName(animation?.key);
+      if (!transitionName) return;
+
+      const transitionKey = resolveUnitAnimationKey(championId, transitionName);
+      if (!transitionKey) return;
+      this.body.play(transitionKey, true);
+    });
+  }
+
+  syncAnimationState(unit) {
+    if (!unit.alive) {
+      this.playAnimation(unit, 'death');
+      return;
+    }
+
+    const intentType = unit.intent?.type;
+    if (intentType === 'CAST') {
+      this.playAnimation(unit, 'cast');
+      return;
+    }
+
+    if (intentType === 'ATTACK' && unit.attackTimer > 0) {
+      this.playAnimation(unit, 'attack');
+      return;
+    }
+
+    if (intentType === 'MOVE') {
+      this.playAnimation(unit, 'move');
+      return;
+    }
+
+    this.playAnimation(unit, 'idle');
+  }
+
+  playAnimation(unit, action) {
+    const animationKey = resolveUnitAnimationKey(unit.championId, action);
+    if (!animationKey || this.body.anims?.currentAnim?.key === animationKey) return;
+    this.body.play(animationKey, true);
   }
 
   destroy() {

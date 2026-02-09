@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { createMatch } from '@autobattle/sim';
 import { FxView } from '../render/FxView.js';
 import { ProjectileView } from '../render/ProjectileView.js';
+import { registerChampionAnimations } from '../render/animationRegistry.js';
 import { UnitView } from '../render/UnitView.js';
 import { DEFAULT_MATCH_DURATION_SEC } from '../types/MatchSetup';
 
@@ -51,6 +52,8 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create() {
+    registerChampionAnimations(this);
+
     const teamA = toMatchTeam(this.teamSetup?.A);
     const teamB = toMatchTeam(this.teamSetup?.B);
 
