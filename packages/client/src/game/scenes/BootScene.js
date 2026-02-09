@@ -4,18 +4,23 @@ import { createRandomSeed, parseSeedInput } from '../utils/seed';
 import { createDefaultMatchSetup, TEAM_SIZE } from '../types/MatchSetup';
 import { selectPositionInfo } from '../selectors/positionInfo';
 
-const SPRITE_SHEET_FRAME_WIDTH = 128;
-const SPRITE_SHEET_FRAME_HEIGHT = 128;
+const SPRITE_SHEET_FRAME_WIDTH = 256;
+const SPRITE_SHEET_FRAME_HEIGHT = 256;
 const SPRITE_SHEET_CONFIG = {
   frameWidth: SPRITE_SHEET_FRAME_WIDTH,
   frameHeight: SPRITE_SHEET_FRAME_HEIGHT
 };
 
-// Current champion sheets are 1024x1536, which maps to 8x12 frames at 128px.
+// Current champion sheets are 1024x1536, which maps to 4x6 frames at 256px.
 const CHAMPION_SPRITE_BASE_PATH = '/assets/sprites';
+const SPRITE_PATH_FALLBACK_BY_CHAMPION_ID = Object.freeze({
+  // 임프 전용 시트가 아직 없어서 임시로 소환사 시트를 재사용합니다.
+  imp_minion: 'summoner_witch'
+});
 
 function resolveChampionSpritePath(champion) {
-  return `${CHAMPION_SPRITE_BASE_PATH}/${champion.id}.png`;
+  const spriteSourceId = SPRITE_PATH_FALLBACK_BY_CHAMPION_ID[champion.id] ?? champion.id;
+  return `${CHAMPION_SPRITE_BASE_PATH}/${spriteSourceId}.png`;
 }
 
 function isDevelopmentMode() {
