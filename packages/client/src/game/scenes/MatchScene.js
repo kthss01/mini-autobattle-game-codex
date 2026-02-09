@@ -35,6 +35,7 @@ export class MatchScene extends Phaser.Scene {
     this.logPage = 0;
     this.logVisible = false;
     this.lastRenderedLogLength = -1;
+    this.animationDebugLines = [];
   }
 
   init(data) {
@@ -49,6 +50,7 @@ export class MatchScene extends Phaser.Scene {
     this.logPage = 0;
     this.logVisible = false;
     this.lastRenderedLogLength = -1;
+    this.animationDebugLines = [];
   }
 
   create() {
@@ -65,6 +67,11 @@ export class MatchScene extends Phaser.Scene {
       color: '#fbbf24',
       fontStyle: 'bold'
     });
+    this.animationDebugText = this.add.text(16, 154, '', {
+      color: '#93c5fd',
+      fontSize: '11px',
+      wordWrap: { width: 410 }
+    });
 
     this.unitViews = new Map();
     this.fxView = new FxView(this);
@@ -73,6 +80,19 @@ export class MatchScene extends Phaser.Scene {
 
     this.createLogOverlay();
     this.refreshLiveCountText();
+    this.refreshAnimationDebugText();
+  }
+
+  recordAnimationDebugLine(line) {
+    this.animationDebugLines.push(line);
+    if (this.animationDebugLines.length > 8) this.animationDebugLines.shift();
+    this.refreshAnimationDebugText();
+  }
+
+  refreshAnimationDebugText() {
+    if (!this.animationDebugText) return;
+    const lines = this.animationDebugLines.length ? this.animationDebugLines : ['[AnimDebug] waiting for state changes...'];
+    this.animationDebugText.setText(lines.join('\n'));
   }
 
   createLogOverlay() {
