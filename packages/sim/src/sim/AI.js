@@ -3,12 +3,28 @@ import { distance, distance2, inRange, isAlive } from './Effects.js';
 
 const AI_TICK_SEC = 0.25;
 
-function getEnemies(world, unit) {
-  return world.units.filter((u) => u.teamId !== unit.teamId && isAlive(u));
+function getEnemyTeamId(unit) {
+  return unit.teamId === 'A' ? 'B' : 'A';
 }
 
 function getAllies(world, unit) {
-  return world.units.filter((u) => u.teamId === unit.teamId && isAlive(u));
+  const indexed = world.indexes?.teamAliveUnits?.[unit.teamId];
+  if (indexed) return indexed;
+  const allies = [];
+  for (const other of world.units) {
+    if (other.teamId === unit.teamId && isAlive(other)) allies.push(other);
+  }
+  return allies;
+}
+
+function getEnemies(world, unit) {
+  const indexed = world.indexes?.teamAliveUnits?.[getEnemyTeamId(unit)];
+  if (indexed) return indexed;
+  const enemies = [];
+  for (const other of world.units) {
+    if (other.teamId !== unit.teamId && isAlive(other)) enemies.push(other);
+  }
+  return enemies;
 }
 
 function canCast(unit, skillId) {
@@ -30,15 +46,25 @@ function shouldKeepBackline(unit) {
 }
 
 function findLowestHpAllyInRange(world, unit, range) {
-  const allies = getAllies(world, unit).filter((a) => inRange(unit, a, range));
-  allies.sort((a, b) => hpRate(a) - hpRate(b));
-  return allies[0] || null;
+  const allies = getAllies(world, unit);
+  let best = null;
+  let bestRate = Infinity;
+  for (const ally of allies) {
+    if (!inRange(unit, ally, range)) continue;
+    const rate = hpRate(ally);
+    if (rate < bestRate) {
+      best = ally;
+      bestRate = rate;
+    }
+  }
+  return best;
 }
 
 function countEnemiesInCircle(world, teamId, point, radius) {
+  const enemies = world.indexes?.teamAliveUnits?.[teamId === 'A' ? 'B' : 'A'] || world.units;
   const r2 = radius * radius;
   let n = 0;
-  for (const u of world.units) {
+  for (const u of enemies) {
     if (!isAlive(u) || u.teamId === teamId) continue;
     const dx = u.x - point.x;
     const dy = u.y - point.y;
@@ -48,14 +74,15 @@ function countEnemiesInCircle(world, teamId, point, radius) {
 }
 
 function findBestPointForAOE(world, unit, radius, castRange) {
-  const enemies = getEnemies(world, unit).filter((e) => inRange(unit, e, castRange));
+  const enemies = getEnemies(world, unit);
   let best = null;
   let bestCount = 0;
-  for (const e of enemies) {
-    const c = countEnemiesInCircle(world, unit.teamId, e, radius);
+  for (const enemy of enemies) {
+    if (!inRange(unit, enemy, castRange)) continue;
+    const c = countEnemiesInCircle(world, unit.teamId, enemy, radius);
     if (c > bestCount) {
       bestCount = c;
-      best = { x: e.x, y: e.y, count: c };
+      best = { x: enemy.x, y: enemy.y, count: c };
     }
   }
   return best;
@@ -72,6 +99,7 @@ function findBestEnemyTarget(world, unit) {
 
   let best = enemies[0];
   let bestScore = -Infinity;
+  const allies = getAllies(world, unit);
   for (const enemy of enemies) {
     let score = 0;
     const d = distance(unit, enemy);
@@ -87,7 +115,13 @@ function findBestEnemyTarget(world, unit) {
     if (unit.tags.includes('BURST') && hpRate(enemy) <= 0.5) score += 0.18;
     if (unit.tags.includes('AOE')) score += Math.min(0.15, countEnemiesInCircle(world, unit.teamId, enemy, 120) * 0.04);
 
-    const focused = world.units.some((ally) => ally.teamId === unit.teamId && ally.intent?.targetId === enemy.id);
+    let focused = false;
+    for (const ally of allies) {
+      if (ally.intent?.targetId === enemy.id) {
+        focused = true;
+        break;
+      }
+    }
     if (focused) score += 0.08;
 
     if (score > bestScore) {
@@ -116,7 +150,6 @@ export function aiTick(world, dt = AI_TICK_SEC) {
       continue;
     }
 
-    // Low hp self-defense
     if (hpRate(unit) < 0.35) {
       const selfSkillId = unit.skillIds.find((sid) => {
         const sk = SKILLS_BY_ID[sid];
@@ -128,7 +161,6 @@ export function aiTick(world, dt = AI_TICK_SEC) {
       }
     }
 
-    // Healer behavior
     if (unit.tags.includes('HEALER')) {
       const lowHpAllySkill = skillByUseWhen(unit, 'LOW_HP_ALLY') || (unit.skillIds.includes('quick_heal') ? SKILLS_BY_ID.quick_heal : null);
       if (lowHpAllySkill) {
@@ -141,16 +173,21 @@ export function aiTick(world, dt = AI_TICK_SEC) {
 
       const healingWave = unit.skillIds.includes('healing_wave') ? SKILLS_BY_ID.healing_wave : null;
       if (healingWave && canCast(unit, healingWave.id)) {
-        const allies = getAllies(world, unit).filter((a) => inRange(unit, a, healingWave.range) && hpRate(a) < 0.6);
-        if (allies.length >= 2) {
-          const center = allies[0];
+        let center = null;
+        let lowHpInRange = 0;
+        for (const ally of getAllies(world, unit)) {
+          if (!inRange(unit, ally, healingWave.range) || hpRate(ally) >= 0.6) continue;
+          if (!center) center = ally;
+          lowHpInRange += 1;
+          if (lowHpInRange >= 2) break;
+        }
+        if (lowHpInRange >= 2 && center) {
           unit.intent = { type: 'CAST', skillId: healingWave.id, targetType: 'POINT', point: { x: center.x, y: center.y } };
           continue;
         }
       }
     }
 
-    // AOE/CC
     for (const sid of unit.skillIds) {
       const sk = SKILLS_BY_ID[sid];
       if (!sk || !canCast(unit, sid)) continue;
@@ -182,7 +219,13 @@ export function aiTick(world, dt = AI_TICK_SEC) {
     if (unit.intent.type === 'CAST') continue;
 
     if (shouldKeepBackline(unit)) {
-      const nearEnemy = getEnemies(world, unit).find((e) => inRange(unit, e, 140));
+      let nearEnemy = null;
+      for (const enemy of getEnemies(world, unit)) {
+        if (inRange(unit, enemy, 140)) {
+          nearEnemy = enemy;
+          break;
+        }
+      }
       if (nearEnemy) {
         const dx = unit.x - nearEnemy.x;
         const dy = unit.y - nearEnemy.y;

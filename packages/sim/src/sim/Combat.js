@@ -3,12 +3,32 @@ import { SKILLS_BY_ID } from '../data/skills.js';
 import { TAG_MODIFIERS } from '../data/tags.js';
 import { clampMapBounds, inRange, isAlive, moveTowards } from './Effects.js';
 
+export function refreshWorldIndexes(world) {
+  const byId = new Map();
+  const teamAliveUnits = { A: [], B: [] };
+
+  for (const unit of world.units) {
+    byId.set(unit.id, unit);
+    if (!isAlive(unit)) continue;
+    if (!teamAliveUnits[unit.teamId]) teamAliveUnits[unit.teamId] = [];
+    teamAliveUnits[unit.teamId].push(unit);
+  }
+
+  world.indexes = { byId, teamAliveUnits };
+  return world.indexes;
+}
+
+function getWorldIndexes(world) {
+  return world.indexes || refreshWorldIndexes(world);
+}
+
 function getById(world, id) {
-  return world.units.find((u) => u.id === id);
+  return getWorldIndexes(world).byId.get(id) || null;
 }
 
 function teamAlive(world, teamId) {
-  return world.units.some((u) => u.teamId === teamId && isAlive(u));
+  const alive = getWorldIndexes(world).teamAliveUnits[teamId];
+  return Boolean(alive && alive.length);
 }
 
 function damageMultiplier(attacker, defender) {
@@ -61,8 +81,10 @@ function applySkill(world, unit, skillId, intent) {
     value: 0
   });
 
-  const enemies = world.units.filter((u) => isAlive(u) && u.teamId !== unit.teamId);
-  const allies = world.units.filter((u) => isAlive(u) && u.teamId === unit.teamId);
+  const indexes = getWorldIndexes(world);
+  const allies = indexes.teamAliveUnits[unit.teamId] || [];
+  const enemyTeamId = unit.teamId === 'A' ? 'B' : 'A';
+  const enemies = indexes.teamAliveUnits[enemyTeamId] || [];
 
   if (skill.target === 'SELF') {
     for (const e of skill.effects) {
@@ -132,6 +154,7 @@ function applySkill(world, unit, skillId, intent) {
           stats: { damageDone: 0, healDone: 0, kills: 0, deaths: 0 }
         });
       }
+      refreshWorldIndexes(world);
       continue;
     }
 

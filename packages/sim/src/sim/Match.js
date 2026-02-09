@@ -1,6 +1,6 @@
 import { mulberry32 } from '../rng.js';
 import { aiTick } from './AI.js';
-import { stepCombat } from './Combat.js';
+import { refreshWorldIndexes, stepCombat } from './Combat.js';
 import { createWorld } from './World.js';
 
 export function createMatchCore(teamA, teamB, opt = {}) {
@@ -13,13 +13,14 @@ export function createMatchCore(teamA, teamB, opt = {}) {
     options,
     step(dt = world.dt) {
       if (world.finished) return { done: true, winner: world.winner };
+      refreshWorldIndexes(world);
       aiTick(world, dt);
       stepCombat(world, dt);
       world.t += dt;
       if (world.t >= options.durationSec) {
         world.finished = true;
-        const aHp = world.units.filter((u) => u.teamId === 'A').reduce((s, u) => s + Math.max(0, u.hp), 0);
-        const bHp = world.units.filter((u) => u.teamId === 'B').reduce((s, u) => s + Math.max(0, u.hp), 0);
+        const aHp = world.units.reduce((sum, unit) => (unit.teamId === 'A' ? sum + Math.max(0, unit.hp) : sum), 0);
+        const bHp = world.units.reduce((sum, unit) => (unit.teamId === 'B' ? sum + Math.max(0, unit.hp) : sum), 0);
         world.winner = aHp === bHp ? 'DRAW' : aHp > bHp ? 'A' : 'B';
       }
       return { done: world.finished, winner: world.winner };
