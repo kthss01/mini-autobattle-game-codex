@@ -4,17 +4,17 @@ import { createRandomSeed, parseSeedInput } from '../utils/seed';
 import { createDefaultMatchSetup, TEAM_SIZE } from '../types/MatchSetup';
 import { selectPositionInfo } from '../selectors/positionInfo';
 
-const SPRITE_SHEET_FRAME_WIDTH = 64;
-const SPRITE_SHEET_FRAME_HEIGHT = 64;
-const SPRITE_SHEET_COLUMNS = 6;
-const SPRITE_SHEET_ROWS = 5;
+const SPRITE_SHEET_FRAME_WIDTH = 128;
+const SPRITE_SHEET_FRAME_HEIGHT = 192;
+const SPRITE_SHEET_COLUMNS = 8;
+const SPRITE_SHEET_ROWS = 8;
 const SPRITE_SHEET_CONFIG = {
   frameWidth: SPRITE_SHEET_FRAME_WIDTH,
   frameHeight: SPRITE_SHEET_FRAME_HEIGHT
 };
 const TRANSPARENCY_KEY_COLOR_THRESHOLD = 248;
 
-// Champion sheets follow a 384x320 layout: 6 columns x 5 rows at 64px per frame.
+// Champion sheets follow a 1024x1536 layout: 8 columns x 8 rows at 128x192 per frame.
 const CHAMPION_SPRITE_BASE_PATH = `${resolveBaseUrl()}assets/sprites`;
 const SPRITE_PATH_FALLBACK_BY_CHAMPION_ID = Object.freeze({
   // 임프 전용 시트가 아직 없어서 임시로 소환사 시트를 재사용합니다.

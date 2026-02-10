@@ -2,11 +2,11 @@ import { CHAMPIONS } from '@autobattle/sim';
 
 const ACTIONS = ['idle', 'move', 'attack', 'cast', 'death'];
 const ACTION_LAYOUT = {
-  idle: { start: 0, end: 5, frameRate: 8, repeat: -1 },
-  move: { start: 6, end: 11, frameRate: 10, repeat: -1 },
-  attack: { start: 12, end: 19, frameRate: 14, repeat: 0 },
-  cast: { start: 20, end: 27, frameRate: 12, repeat: 0 },
-  death: { start: 24, end: 29, frameRate: 10, repeat: 0 }
+  idle: { start: 1, end: 6, frameRate: 8, repeat: -1 },
+  move: { start: 9, end: 14, frameRate: 10, repeat: -1 },
+  attack: { start: 17, end: 22, frameRate: 14, repeat: 0 },
+  cast: { start: 33, end: 38, frameRate: 12, repeat: 0 },
+  death: { start: 57, end: 62, frameRate: 10, repeat: 0 }
 };
 
 const COMPLETION_TRANSITION = {
