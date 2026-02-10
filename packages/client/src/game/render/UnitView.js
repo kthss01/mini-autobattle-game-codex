@@ -30,6 +30,8 @@ const VISUAL_STATE_FALLBACK_CHAIN = Object.freeze({
   death: ['idle']
 });
 const TRANSIENT_STATES = new Set([VISUAL_STATES.ATTACK, VISUAL_STATES.CAST]);
+// TODO(보류): 스프레드시트 기반 2D 모델/스프라이트 적용 이슈 해결 전까지 도형 렌더링을 유지합니다.
+const ENABLE_CHAMPION_SPRITES = false;
 
 function resolveRoleLabel(role) {
   const normalizedRole = typeof role === 'string' ? role.toLowerCase() : '';
@@ -78,7 +80,7 @@ export class UnitView {
     this.facingDirectionX = unit.teamId === 'B' ? -1 : 1;
     this.lastLoggedState = null;
 
-    if (textureKey && scene.textures.exists(textureKey)) {
+    if (ENABLE_CHAMPION_SPRITES && textureKey && scene.textures.exists(textureKey)) {
       this.body = scene.add.sprite(unit.x, unit.y, textureKey, 0).setDisplaySize(SPRITE_SIZE, SPRITE_SIZE);
       this.body.setTint(teamColor);
       this.bindAnimationTransition(unit.championId);
