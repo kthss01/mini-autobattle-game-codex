@@ -13,6 +13,8 @@ const SPRITE_SHEET_CONFIG = {
   frameHeight: SPRITE_SHEET_FRAME_HEIGHT
 };
 const TRANSPARENCY_KEY_COLOR_THRESHOLD = 248;
+// TODO(보류): 스프레드시트 기반 2D 모델/스프라이트 적용 이슈 해결 전까지 비활성화합니다.
+const ENABLE_CHAMPION_SPRITES = false;
 
 // Champion sheets follow a 1024x1536 layout: 8 columns x 8 rows at 128x192 per frame.
 const CHAMPION_SPRITE_BASE_PATH = `${resolveBaseUrl()}assets/sprites`;
@@ -57,14 +59,19 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    CHAMPIONS.forEach((champion) => {
-      const spritePath = resolveChampionSpritePath(champion);
-      this.load.spritesheet(champion.spriteKey, spritePath, SPRITE_SHEET_CONFIG);
-    });
+    // TODO(보류): 스프레드시트 기반 2D 모델/스프라이트 적용 이슈 해결 시 아래 로더를 재활성화합니다.
+    if (ENABLE_CHAMPION_SPRITES) {
+      CHAMPIONS.forEach((champion) => {
+        const spritePath = resolveChampionSpritePath(champion);
+        this.load.spritesheet(champion.spriteKey, spritePath, SPRITE_SHEET_CONFIG);
+      });
+    }
   }
 
   create() {
-    this.rebuildOpaqueChampionSheetsWithTransparency();
+    if (ENABLE_CHAMPION_SPRITES) {
+      this.rebuildOpaqueChampionSheetsWithTransparency();
+    }
 
     this.slotAssignments = CHAMPIONS.slice(0, TEAM_SIZE).map((champion, slotIndex) => ({
       slotIndex,
