@@ -130,8 +130,8 @@ function resolveTeamBuff(champions) {
 
 export function createWorld(teamA, teamB, rng, opt = {}) {
   resetUnitIdCounter();
-  const width = 800;
-  const height = 450;
+  const width = 960;
+  const height = 540;
   const dt = 1 / 30;
   const xInset = Math.round((160 / 960) * width);
 

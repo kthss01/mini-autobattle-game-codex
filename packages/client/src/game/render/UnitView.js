@@ -1,13 +1,6 @@
 import { CHAMPIONS_BY_ID, UNIT_ROLES } from '@autobattle/sim';
 import { resolveAnimationTransitionName } from './animationRegistry.js';
 
-const ROLE_LABEL_MAP = {
-  [UNIT_ROLES.TANK]: 'Tank',
-  [UNIT_ROLES.HEALER]: 'Healer',
-  [UNIT_ROLES.DPS]: 'DPS',
-  [UNIT_ROLES.SUPPORT]: 'Support'
-};
-
 const VISUAL_STATES = Object.freeze({
   IDLE: 'idle',
   MOVE: 'move',
@@ -33,14 +26,13 @@ const TRANSIENT_STATES = new Set([VISUAL_STATES.ATTACK, VISUAL_STATES.CAST]);
 // TODO(보류): 스프레드시트 기반 2D 모델/스프라이트 적용 이슈 해결 전까지 도형 렌더링을 유지합니다.
 const ENABLE_CHAMPION_SPRITES = false;
 
-function resolveRoleLabel(role) {
-  const normalizedRole = typeof role === 'string' ? role.toLowerCase() : '';
-  return ROLE_LABEL_MAP[normalizedRole] ?? 'Unknown';
-}
-
 function resolveChampionRenderMeta(championId) {
   if (!championId) return null;
   return CHAMPIONS_BY_ID[championId] ?? null;
+}
+
+function resolveChampionLabel(championId) {
+  return resolveChampionRenderMeta(championId)?.name ?? 'Unknown';
 }
 
 function resolveTextureKey(unit) {
@@ -62,6 +54,24 @@ export function resolveUnitAnimationKey(championId, animationName) {
 }
 
 function createFallbackBody(scene, unit, color) {
+  const normalizedRole = typeof unit.role === 'string' ? unit.role.toLowerCase() : '';
+
+  if (normalizedRole === UNIT_ROLES.TANK) {
+    return scene.add.circle(unit.x, unit.y, 17, color);
+  }
+
+  if (normalizedRole === UNIT_ROLES.DPS) {
+    return scene.add.triangle(unit.x, unit.y, 0, 32, 16, 0, 32, 32, color).setOrigin(0.5, 0.5);
+  }
+
+  if (normalizedRole === UNIT_ROLES.SUPPORT) {
+    return scene.add.rectangle(unit.x, unit.y, 30, 30, color).setOrigin(0.5);
+  }
+
+  if (normalizedRole === UNIT_ROLES.HEALER) {
+    return scene.add.polygon(unit.x, unit.y, [0, 16, 16, 0, 32, 16, 16, 32], color).setOrigin(0.5);
+  }
+
   return scene.add.circle(unit.x, unit.y, 16, color);
 }
 
@@ -69,7 +79,7 @@ export class UnitView {
   constructor(scene, unit) {
     this.scene = scene;
     this.unitId = unit.id;
-    this.roleLabelText = resolveRoleLabel(unit.role);
+    this.roleLabelText = resolveChampionLabel(unit.championId);
 
     const teamColor = unit.teamId === 'A' ? 0x38bdf8 : 0xf87171;
     const textureKey = resolveTextureKey(unit);
