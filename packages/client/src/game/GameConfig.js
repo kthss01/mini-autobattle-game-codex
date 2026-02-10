@@ -5,8 +5,8 @@ import { EndScene } from './scenes/EndScene.js';
 
 export const GameConfig = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 450,
+  width: 960,
+  height: 540,
   parent: 'app',
   backgroundColor: '#10131a',
   scene: [BootScene, MatchScene, ResultScene, EndScene]
