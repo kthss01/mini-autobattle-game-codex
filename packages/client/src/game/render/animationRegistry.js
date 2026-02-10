@@ -1,14 +1,12 @@
 import { CHAMPIONS } from '@autobattle/sim';
 
 const ACTIONS = ['idle', 'move', 'attack', 'cast', 'death'];
-const FRAMES_PER_ROW = 6;
-
 const ACTION_LAYOUT = {
-  idle: { row: 0, frameRate: 8, repeat: -1 },
-  move: { row: 1, frameRate: 10, repeat: -1 },
-  attack: { row: 2, frameRate: 14, repeat: 0 },
-  cast: { row: 3, frameRate: 12, repeat: 0 },
-  death: { row: 4, frameRate: 10, repeat: 0 }
+  idle: { start: 0, end: 5, frameRate: 8, repeat: -1 },
+  move: { start: 6, end: 11, frameRate: 10, repeat: -1 },
+  attack: { start: 12, end: 19, frameRate: 14, repeat: 0 },
+  cast: { start: 20, end: 27, frameRate: 12, repeat: 0 },
+  death: { start: 24, end: 29, frameRate: 10, repeat: 0 }
 };
 
 const COMPLETION_TRANSITION = {
@@ -18,9 +16,7 @@ const COMPLETION_TRANSITION = {
 };
 
 function resolveFrameRange(action) {
-  const row = ACTION_LAYOUT[action].row;
-  const start = row * FRAMES_PER_ROW;
-  const end = start + FRAMES_PER_ROW - 1;
+  const { start, end } = ACTION_LAYOUT[action];
   return { start, end };
 }
 
