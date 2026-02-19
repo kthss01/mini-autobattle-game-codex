@@ -99,6 +99,13 @@ root/
             FxView.js
 ```
 
+## 프로젝트 썸네일
+
+![프로젝트 썸네일](packages/client/public/assets/project-thumbnail.svg)
+
+- 원본 파일: `packages/client/public/assets/project-thumbnail.svg`
+- 저장소의 기존 유닛 스프라이트를 활용해 대표 이미지를 구성했습니다.
+
 ## 다음 단계
 
 - 티켓 3: fixed-step 헤드리스 전투 코어 + 결정론(seed) 강화
